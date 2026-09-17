@@ -1,0 +1,21 @@
+.auth-page { min-height: 800px; display: grid; grid-template-columns: .8fr 1fr; background: var(--paper); color: var(--ink); }
+.auth-art { position: relative; overflow: hidden; min-height: 650px; background: #25412e; color: var(--cream); padding: clamp(2.5rem, 5vw, 5rem); display: flex; flex-direction: column; justify-content: space-between; }
+.auth-art::after { content: ''; position: absolute; width: 70%; aspect-ratio: 1; border: 2px solid #e4e4cf; border-radius: 50%; left: -15%; top: 25%; opacity: .5; }
+.auth-art-star { font-size: clamp(12rem, 25vw, 30rem); color: var(--coral); line-height: .6; transform: rotate(-12deg); margin-left: auto; z-index: 1; }
+.auth-art h1 { position: relative; z-index: 2; font-family: var(--display); font-weight: 600; font-size: clamp(3.2rem, 5.4vw, 6rem); line-height: 1; letter-spacing: -.07em; margin: auto 0 1rem; }
+.auth-art h1 em { font-weight: 500; }
+.auth-art p { position: relative; z-index: 2; max-width: 390px; }
+.auth-panel { padding: 3rem clamp(2rem, 6vw, 6rem) 5rem; }
+.back-link { font-size: .71rem; font-weight: 700; text-decoration: none; text-transform: uppercase; letter-spacing: .1em; }
+.auth-panel-inner { max-width: 690px; margin: 4rem auto 0; }
+.auth-panel-inner .eyebrow { color: var(--coral-dark); }
+.auth-panel h2 { font-family: var(--display); font-size: clamp(3rem, 5vw, 5rem); letter-spacing: -.07em; margin: .7rem 0 .3rem; line-height: 1; }
+.auth-panel-inner > p { color: #52594e; max-width: 480px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 2rem; }
+.full { grid-column: 1 / -1; }
+.demo-callout { padding: .8rem 1rem; background: #ffddbc; border-left: 3px solid var(--coral); font-size: .82rem; }
+.submit { width: 100%; margin-top: 1.5rem; }
+.auth-switch { margin-top: 1.6rem; font-size: .84rem; }
+.auth-switch a { font-weight: 700; text-underline-offset: 3px; }
+@media(max-width: 900px) { .auth-page { grid-template-columns: 1fr; } .auth-art { min-height: 320px; } .auth-art-star { position: absolute; right: 2rem; top: 8rem; font-size: 13rem; } .auth-art h1 { max-width: 550px; margin-top: 4rem; } .auth-panel-inner { margin-top: 2.5rem; } }
+@media(max-width: 560px) { .auth-art { min-height: 280px; } .auth-art-star { opacity: .35; } .form-grid { grid-template-columns: 1fr; } .full { grid-column: auto; } }

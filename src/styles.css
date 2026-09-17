@@ -1,0 +1,31 @@
+:root { --ink: #111710; --cream: #f0e9d9; --paper: #e8e2d3; --muted: #aab0a4; --coral: #dc7350; --coral-dark: #a6482e; --display: 'Fraunces', Georgia, serif; --body: 'DM Sans', sans-serif; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--ink); color: var(--cream); font-family: var(--body); line-height: 1.5; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+::selection { background: var(--coral); color: var(--ink); }
+:focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+.skip-link { position: absolute; top: -100px; left: 10px; background: var(--coral); color: var(--ink); padding: .7rem 1rem; z-index: 100; }
+.skip-link:focus { top: 10px; }
+.container { width: min(91%, 1440px); margin-inline: auto; }
+.eyebrow { font-size: .74rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.button-primary, .button-outline, .button-light { border-radius: 100px; padding: .9rem 1.4rem; display: inline-flex; align-items: center; justify-content: center; gap: 1.2rem; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; transition: transform .2s, background .2s, color .2s; }
+.button-primary { background: var(--coral); color: var(--ink); border: 1px solid var(--coral); }
+.button-outline { background: transparent; border: 1px solid currentColor; color: inherit; }
+.button-light { background: var(--cream); color: var(--ink); border: 1px solid var(--cream); }
+.button-primary:hover, .button-outline:hover, .button-light:hover { transform: translateY(-3px); }
+.button-primary:disabled, .button-outline:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.form-field { display: flex; flex-direction: column; gap: .45rem; }
+.form-field label, .form-field legend { font-size: .74rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.form-field input, .form-field select, .form-field textarea { border: 1px solid #afafa5; border-radius: 5px; background: #fbf9f2; color: var(--ink); padding: .85rem .95rem; width: 100%; min-height: 48px; }
+.form-field textarea { resize: vertical; min-height: 120px; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: var(--coral-dark); }
+.field-error, .form-error { color: #a4432c; font-size: .77rem; font-weight: 600; }
+.form-success { color: #315e39; font-weight: 700; }
+.form-error { padding: .7rem 1rem; background: #ffdfd5; border-radius: 5px; }
+.back-link { font-size: .74rem; text-transform: uppercase; letter-spacing: .11em; font-weight: 700; text-decoration: none; display: inline-flex; gap: .6rem; align-items: center; }
+.back-link:hover { color: var(--coral); }
+@media(prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

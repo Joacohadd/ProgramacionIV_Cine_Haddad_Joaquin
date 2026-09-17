@@ -1,0 +1,7 @@
+.site-footer { background: #0c110c; color: #d0d6c8; border-top: 1px solid #394339; }
+.footer-inner { max-width: 1440px; margin: auto; padding: 3rem 4.5%; display: flex; justify-content: space-between; gap: 2rem; }
+.footer-brand { font-family: var(--display); color: var(--cream); font-size: 2.3rem; font-weight: 700; text-decoration: none; letter-spacing: -.08em; }
+.footer-brand span { color: var(--coral); }
+.site-footer p { max-width: 320px; font-size: .85rem; }
+.footer-side { display: flex; flex-direction: column; justify-content: end; gap: .6rem; text-align: right; text-transform: uppercase; letter-spacing: .13em; font-size: .69rem; }
+@media(max-width:600px) { .footer-inner { flex-direction: column; } .footer-side { text-align: left; } }

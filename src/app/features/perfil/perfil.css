@@ -1,0 +1,24 @@
+.profile-page { background: var(--paper); color: var(--ink); padding: 3rem 0 7rem; }
+.back-link { color: var(--coral-dark); }
+.profile-header { padding: 5rem 0 3.5rem; border-bottom: 1px solid #a4aa9e; }
+.profile-header .eyebrow { color: var(--coral-dark); }
+.profile-header h1 { font-family: var(--display); font-size: clamp(3.5rem, 8vw, 8rem); line-height: 1; letter-spacing: -.075em; margin: 1rem 0; font-weight: 600; }
+.profile-header h1 em { font-weight: 500; }
+.profile-header p { max-width: 550px; }
+.profile-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 1.6rem; margin-top: 2rem; }
+.profile-card { padding: clamp(1.5rem, 3vw, 3rem); background: #f8f5e9; }
+.profile-card.benefits { background: #243a29; color: var(--cream); }
+.card-heading { display: flex; justify-content: space-between; align-items: center; font-size: .7rem; letter-spacing: .14em; font-weight: 700; }
+.card-heading span:last-child { font-size: 1.7rem; color: var(--coral); }
+.profile-card h2 { font-family: var(--display); font-size: clamp(2.2rem, 3.6vw, 3.4rem); letter-spacing: -.06em; margin: 2.5rem 0 1.5rem; }
+dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .2rem 2rem; }
+dl div { border-top: 1px solid #cad0c3; padding: 1.1rem 0; }
+dt, .balance > span { display: block; font-size: .67rem; letter-spacing: .12em; font-weight: 700; text-transform: uppercase; color: #6b7466; }
+dd { margin: .35rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
+.balance { border-top: 1px solid #7d8d7b; padding: 1.3rem 0; }
+.balance > span { color: #b8c5b4; }
+.balance strong { display: block; font-family: var(--display); font-size: 3rem; letter-spacing: -.06em; font-weight: 500; margin: .25rem 0; }
+.balance p { font-size: .76rem; color: #bdc8bb; max-width: 330px; }
+.demo-profile-note { margin-top: 2rem; color: #5b6557; font-size: .78rem; }
+@media(max-width: 780px) { .profile-grid { grid-template-columns: 1fr; } }
+@media(max-width: 500px) { dl { grid-template-columns: 1fr; } }

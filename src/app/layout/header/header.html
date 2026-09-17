@@ -1,0 +1,20 @@
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" routerLink="/" aria-label="Umbral Cine, ir al inicio"><span class="brand-mark"></span><span>umbral<span class="brand-dot">.</span></span></a>
+    <button class="menu-toggle" type="button" [attr.aria-expanded]="menuOpen()" aria-controls="nav-principal" (click)="menuOpen.set(!menuOpen())">Menú <span aria-hidden="true">☰</span></button>
+    <nav id="nav-principal" class="main-nav" [class.open]="menuOpen()" aria-label="Navegación principal">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="menuOpen.set(false)">Cartelera</a>
+      <a *appRole="'admin'" routerLink="/admin/peliculas" routerLinkActive="active" (click)="menuOpen.set(false)">Películas</a>
+      <a *appRole="'admin'" routerLink="/admin/programacion" routerLinkActive="active" (click)="menuOpen.set(false)">Funciones</a>
+      @if (auth.currentUserData()) {
+        <a routerLink="/perfil" routerLinkActive="active" (click)="menuOpen.set(false)">Mi perfil</a>
+        <button type="button" class="nav-text-button" (click)="salir()">Salir</button>
+      } @else {
+        <a routerLink="/login" routerLinkActive="active" (click)="menuOpen.set(false)">Ingresar</a>
+        <a class="nav-cta" routerLink="/registro" (click)="menuOpen.set(false)">Crear cuenta <span aria-hidden="true">↗</span></a>
+      }
+    </nav>
+  </div>
+</header>
+@if (auth.demo) { <div class="demo-strip">Modo muestra · datos ficticios guardados solo en este navegador. <a routerLink="/login">Ver acceso de prueba</a></div> }
