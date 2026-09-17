@@ -1,0 +1,124 @@
+<section class="schedule-page container">
+  <a class="back-link" routerLink="/">← Volver a cartelera</a>
+
+  <header class="schedule-heading">
+    <div>
+      <span class="eyebrow">ADMINISTRACIÓN / PROGRAMACIÓN</span>
+      <h1>El tiempo también <em>se diseña.</em></h1>
+      <p>Definí la recurrencia de cada película. Umbral encuentra una sala compatible, evita cruces y conserva 30 minutos entre funciones.</p>
+    </div>
+    <nav class="admin-switch" aria-label="Secciones de administración">
+      <a routerLink="/admin/peliculas">Películas</a>
+      <a class="active" routerLink="/admin/programacion">Funciones y salas</a>
+    </nav>
+  </header>
+
+  <div class="control-strip">
+    <article><span>PROGRAMACIONES ACTIVAS</span><strong>{{ funcionesActivas() }}</strong></article>
+    <article><span>SALAS OPERATIVAS</span><strong>{{ salasActivas() }}</strong></article>
+    <article><span>FORMATOS</span><strong>2D—5D</strong></article>
+    <article class="rule-card"><span>REGLA DE ROTACIÓN</span><strong>+30′</strong><p>entre el final y el próximo comienzo</p></article>
+  </div>
+
+  @if (servicio.error()) { <p class="page-alert" role="alert">{{ servicio.error() }}</p> }
+
+  <div class="planner-grid">
+    <form class="function-editor" [formGroup]="funcionForm" (ngSubmit)="guardarFuncion()" novalidate>
+      <div class="editor-heading">
+        <span class="step-number">01</span>
+        <div><span class="eyebrow">{{ funcionEditando() ? 'EDITAR PROGRAMACIÓN' : 'NUEVA PROGRAMACIÓN' }}</span><h2>Película y frecuencia</h2></div>
+      </div>
+
+      <div class="form-field wide">
+        <label for="pelicula">Película</label>
+        <select id="pelicula" formControlName="pelicula_id">
+          <option value="">Seleccionar película</option>
+          @for (pelicula of peliculasServicio.peliculas(); track pelicula.id) { <option [value]="pelicula.id">{{ pelicula.titulo }} · {{ pelicula.duracion_minutos }} min</option> }
+        </select>
+        @if (funcionForm.controls.pelicula_id.touched && funcionForm.controls.pelicula_id.invalid) { <small class="field-error">Elegí una película.</small> }
+      </div>
+
+      <fieldset class="days-field wide">
+        <legend>Días de la semana</legend>
+        <div class="day-options">
+          @for (dia of dias; track dia.valor) {
+            <button type="button" [class.selected]="diasSeleccionados().includes(dia.valor)" [attr.aria-pressed]="diasSeleccionados().includes(dia.valor)" (click)="toggleDia(dia.valor)"><span>{{ dia.corto }}</span><small>{{ dia.nombre }}</small></button>
+          }
+        </div>
+      </fieldset>
+
+      <div class="date-pair wide">
+        <div class="form-field"><label for="desde">Desde</label><input id="desde" type="date" formControlName="fecha_desde"></div>
+        <div class="date-connector" aria-hidden="true">→</div>
+        <div class="form-field"><label for="hasta">Hasta</label><input id="hasta" type="date" formControlName="fecha_hasta"></div>
+      </div>
+
+      <div class="form-field"><label for="hora">Hora de inicio</label><input id="hora" type="time" formControlName="hora_inicio"></div>
+      <div class="form-field"><label for="formato">Formato</label><select id="formato" formControlName="formato">@for (formato of formatos; track formato) { <option [value]="formato">{{ formato }}</option> }</select></div>
+      <div class="form-field"><label for="idioma">Idioma</label><select id="idioma" formControlName="idioma"><option value="Castellano">Castellano</option><option value="Subtitulada">Subtitulada</option></select></div>
+      <label class="active-check"><input type="checkbox" formControlName="activa"><span>Programación activa</span></label>
+
+      <div class="auto-room wide"><span aria-hidden="true">✳</span><p><strong>Asignación automática.</strong> La sala se elige al guardar según formato, disponibilidad, duración y margen de limpieza.</p></div>
+
+      @if (errorFuncion()) { <p class="form-error wide" role="alert">{{ errorFuncion() }}</p> }
+      @if (mensajeFuncion()) { <p class="form-success wide" role="status">{{ mensajeFuncion() }}</p> }
+      <div class="form-actions wide">
+        <button class="button-primary" type="submit" [disabled]="guardandoFuncion()">{{ guardandoFuncion() ? 'Buscando sala...' : funcionEditando() ? 'Guardar cambios ↗' : 'Asignar y programar ↗' }}</button>
+        @if (funcionEditando()) { <button class="text-action" type="button" (click)="cancelarEdicionFuncion()">Cancelar edición</button> }
+      </div>
+    </form>
+
+    <section class="agenda" aria-labelledby="agenda-title">
+      <div class="agenda-heading"><div><span class="eyebrow">AGENDA VIGENTE</span><h2 id="agenda-title">La semana en sala.</h2></div><span>{{ servicio.funciones().length }} bloques</span></div>
+      @if (servicio.cargando()) { <p class="empty-state">Cargando programación...</p> }
+      <div class="schedule-list">
+        @for (funcion of servicio.funciones(); track funcion.id) {
+          <article class="schedule-card" [class.inactive]="!funcion.activa">
+            <div class="show-time"><strong>{{ funcion.hora_inicio }}</strong><span>→ {{ horaFinal(funcion) }}</span></div>
+            <img [src]="funcion.pelicula_imagen_url" [alt]="'Póster de ' + funcion.pelicula_titulo">
+            <div class="show-copy"><div class="show-kicker"><span>{{ funcion.formato }}</span><span>{{ funcion.idioma }}</span><span [class.off]="!funcion.activa">{{ funcion.activa ? 'Activa' : 'Pausada' }}</span></div><h3>{{ funcion.pelicula_titulo }}</h3><p>{{ diasTexto(funcion) }}</p><small>{{ fechaCorta(funcion.fecha_desde) }} — {{ fechaCorta(funcion.fecha_hasta) }}</small></div>
+            <div class="room-assignment"><span>SALA ASIGNADA</span><strong>{{ funcion.sala_nombre }}</strong><small>{{ funcion.duracion_minutos }} min + 30 min</small></div>
+            <div class="row-actions"><button type="button" (click)="editarFuncion(funcion)">Editar</button><button class="danger" type="button" (click)="eliminarFuncion(funcion)">Eliminar</button></div>
+          </article>
+        } @empty { <p class="empty-state">Todavía no hay funciones programadas.</p> }
+      </div>
+    </section>
+  </div>
+
+  <section class="rooms-section" aria-labelledby="rooms-title">
+    <div class="rooms-heading"><div><span class="eyebrow">02 / INFRAESTRUCTURA</span><h2 id="rooms-title">Salas y distribución.</h2></div><p>Cada sala declara su distribución de butacas y los formatos que puede proyectar. Esa información guía la asignación automática.</p></div>
+
+    <div class="rooms-layout">
+      <form class="room-editor" [formGroup]="salaForm" (ngSubmit)="guardarSala()" novalidate>
+        <div class="editor-heading compact"><span class="step-number">{{ salaEditando() ? '↺' : '+' }}</span><div><span class="eyebrow">{{ salaEditando() ? 'EDITAR SALA' : 'NUEVA SALA' }}</span><h3>Ficha técnica</h3></div></div>
+        <div class="form-field wide"><label for="sala-nombre">Nombre</label><input id="sala-nombre" formControlName="nombre" placeholder="Ej. Sala Prisma">@if(salaForm.controls.nombre.touched && salaForm.controls.nombre.invalid) { <small class="field-error">Ingresá entre 2 y 80 caracteres.</small> }</div>
+        <div class="room-numbers wide">
+          <div class="form-field"><label for="filas">Filas</label><input id="filas" type="number" min="1" max="40" formControlName="filas"></div>
+          <div class="form-field"><label for="izquierda">Bloque izq.</label><input id="izquierda" type="number" min="1" max="50" formControlName="butacas_izquierda"></div>
+          <div class="form-field"><label for="centro">Bloque centro</label><input id="centro" type="number" min="1" max="50" formControlName="butacas_centro"></div>
+          <div class="form-field"><label for="derecha">Bloque der.</label><input id="derecha" type="number" min="1" max="50" formControlName="butacas_derecha"></div>
+        </div>
+        <fieldset class="format-field wide"><legend>Formatos compatibles</legend><div>@for(formato of formatos; track formato) { <button type="button" [class.selected]="formatosSeleccionados().includes(formato)" [attr.aria-pressed]="formatosSeleccionados().includes(formato)" (click)="toggleFormato(formato)">{{ formato }}</button> }</div></fieldset>
+        <label class="active-check wide"><input type="checkbox" formControlName="activa"><span>Sala operativa</span></label>
+        @if (errorSala()) { <p class="form-error wide" role="alert">{{ errorSala() }}</p> }
+        @if (mensajeSala()) { <p class="form-success wide" role="status">{{ mensajeSala() }}</p> }
+        <div class="form-actions wide"><button class="button-light" type="submit" [disabled]="guardandoSala()">{{ guardandoSala() ? 'Guardando...' : salaEditando() ? 'Guardar sala ↗' : 'Crear sala ↗' }}</button>@if(salaEditando()) { <button class="text-action light" type="button" (click)="cancelarEdicionSala()">Cancelar</button> }</div>
+      </form>
+
+      <div class="room-cards">
+        @for (sala of servicio.salas(); track sala.id) {
+          <article class="room-card" [class.inactive]="!sala.activa">
+            <div class="room-top"><div><span>{{ sala.activa ? 'OPERATIVA' : 'FUERA DE SERVICIO' }}</span><h3>{{ sala.nombre }}</h3></div><button type="button" (click)="editarSala(sala)">Editar ↗</button></div>
+            <div class="screen-line"><span>PANTALLA</span></div>
+            <div class="seat-diagram" aria-label="Distribución de la sala">
+              <div class="seat-block narrow"><i></i><span>{{ sala.butacas_izquierda }}</span></div>
+              <div class="seat-block central"><i></i><span>{{ sala.butacas_centro }}</span></div>
+              <div class="seat-block narrow"><i></i><span>{{ sala.butacas_derecha }}</span></div>
+            </div>
+            <div class="room-meta"><span><small>FILAS</small><strong>{{ sala.filas }}</strong></span><span><small>CAPACIDAD</small><strong>{{ capacidad(sala) }}</strong></span><span class="formats"><small>FORMATOS</small><strong>{{ sala.formatos.join(' · ') }}</strong></span></div>
+          </article>
+        } @empty { <p class="empty-state">Creá una sala para poder asignar funciones.</p> }
+      </div>
+    </div>
+  </section>
+</section>
