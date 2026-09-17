@@ -1,0 +1,8 @@
+<article class="movie-card">
+  <button type="button" class="poster-button" [attr.aria-label]="'Ver detalles de ' + pelicula().titulo" (click)="ver.emit(pelicula().id)">
+    <img [src]="pelicula().imagen_url" [alt]="'Póster de ' + pelicula().titulo" loading="lazy">
+    @if (ranking()) { <span class="rank-badge">#{{ ranking() }} MÁS ELEGIDA</span> }
+    <span class="poster-arrow" aria-hidden="true">↗</span>
+  </button>
+  <div class="card-info"><div class="card-top"><span class="card-genres">{{ pelicula().generos.join(' / ') }}</span><span class="card-rating">@switch(pelicula().clasificacion) { @case('ATP') { ATP } @default { +{{ pelicula().clasificacion }} } }</span></div><button class="title-button" type="button" (click)="ver.emit(pelicula().id)">{{ pelicula().titulo }}</button><div class="card-review"><app-calificacion-estrellas [valor]="pelicula().promedio_calificacion" /><span>{{ pelicula().cantidad_resenas ? pelicula().cantidad_resenas + (pelicula().cantidad_resenas === 1 ? ' reseña' : ' reseñas') : 'Sin reseñas' }}</span></div><div class="card-bottom"><span>{{ pelicula().duracion_minutos | duracion }}</span><span class="line"></span><span>{{ pelicula().entradas_vendidas }} entradas</span></div></div>
+</article>

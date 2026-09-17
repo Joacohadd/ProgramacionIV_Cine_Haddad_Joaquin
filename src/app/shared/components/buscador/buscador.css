@@ -1,0 +1,8 @@
+.search-wrap { min-width: min(100%, 375px); }
+label { display: block; text-transform: uppercase; font-size: .72rem; letter-spacing: .15em; font-weight: 700; margin-bottom: .65rem; }
+.search-input { display: flex; align-items: center; border-bottom: 1px solid #979f94; gap: .7rem; }
+.search-input span { font-size: 2rem; line-height: 1; color: var(--coral); }
+input { width: 100%; color: var(--cream); background: transparent; border: 0; padding: .6rem 0; outline: 0; }
+input::placeholder { color: #aab3a7; }
+.search-input:focus-within { border-color: var(--coral); }
+button { color: var(--cream); font-size: 1.4rem; background: transparent; border: 0; padding: .2rem; }

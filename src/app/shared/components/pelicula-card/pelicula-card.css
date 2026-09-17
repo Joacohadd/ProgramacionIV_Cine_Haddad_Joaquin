@@ -1,0 +1,16 @@
+.movie-card { min-width: 0; }
+.poster-button { display: block; position: relative; overflow: hidden; width: 100%; aspect-ratio: 4 / 5; padding: 0; background: #2a3027; border: 0; color: var(--cream); text-align: left; }
+.poster-button img { height: 100%; width: 100%; object-fit: cover; transition: transform .55s ease, filter .55s; }
+.poster-button:hover img { transform: scale(1.055); filter: brightness(.88); }
+.rank-badge { position: absolute; top: .8rem; left: .8rem; background: var(--coral); color: var(--ink); padding: .52rem .7rem; font-size: .64rem; font-weight: 700; letter-spacing: .12em; }
+.poster-arrow { position: absolute; bottom: .8rem; right: .8rem; display: grid; place-items: center; background: var(--cream); color: var(--ink); border-radius: 50%; width: 38px; height: 38px; font-size: 1.25rem; transform: translateY(55px); transition: transform .3s; }
+.poster-button:hover .poster-arrow, .poster-button:focus-visible .poster-arrow { transform: translateY(0); }
+.card-info { padding: 1.05rem .1rem 0; }
+.card-top, .card-bottom { display: flex; align-items: center; gap: .7rem; color: #bbc3b4; font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; }
+.card-top { justify-content: space-between; }
+.card-genres { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.card-rating { flex: 0 0 auto; border: 1px solid #697365; border-radius: 2px; padding: .15rem .3rem; }
+.title-button { background: transparent; border: 0; padding: .42rem 0 .65rem; color: var(--cream); font-family: var(--display); font-size: clamp(1.4rem, 2vw, 1.85rem); letter-spacing: -.04em; text-align: left; line-height: 1.1; }
+.title-button:hover { color: var(--coral); }
+.card-review { display: flex; align-items: center; gap: .55rem; min-height: 25px; color: #aeb9aa; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; }
+.card-bottom .line { width: 20px; height: 1px; background: #697365; }
