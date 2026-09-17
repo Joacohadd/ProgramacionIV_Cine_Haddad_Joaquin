@@ -1,0 +1,8 @@
+.stars { display: inline-flex; align-items: center; gap: .08rem; color: #546151; white-space: nowrap; }
+.stars span, .stars button { border: 0; background: transparent; padding: 0; color: #526050; font-size: 1rem; line-height: 1; }
+.stars span.filled, .stars button.filled { color: var(--coral); }
+.stars strong { color: var(--cream); font-size: .72rem; margin-left: .38rem; letter-spacing: .04em; }
+.stars.editable { gap: .25rem; }
+.stars.editable button { color: #a5aea0; font-size: 2.1rem; transition: color .15s, transform .15s; }
+.stars.editable button.filled { color: var(--coral); }
+.stars.editable button:hover, .stars.editable button:focus-visible { color: var(--coral); transform: translateY(-2px); }

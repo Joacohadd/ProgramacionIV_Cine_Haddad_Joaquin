@@ -1,0 +1,10 @@
+<div class="stars" [class.editable]="editable()" [attr.role]="editable() ? 'group' : 'img'" [attr.aria-label]="editable() ? (valor() ? 'Elegir ' + valor() + ' de 5 estrellas' : 'Elegir una puntuación de 1 a 5 estrellas') : valor() ? 'Puntuación promedio: ' + valor().toFixed(1) + ' de 5' : 'Sin puntuación'">
+  @for (estrella of estrellas; track estrella) {
+    @if (editable()) {
+      <button type="button" [class.filled]="estaLlena(estrella)" [attr.aria-label]="'Puntuar con ' + estrella + ' estrellas'" [attr.aria-pressed]="valor() === estrella" (click)="elegir(estrella)">★</button>
+    } @else {
+      <span [class.filled]="estaLlena(estrella)" aria-hidden="true">★</span>
+    }
+  }
+  @if (!editable()) { <strong>{{ valor() ? valor().toFixed(1) : '—' }}</strong> }
+</div>

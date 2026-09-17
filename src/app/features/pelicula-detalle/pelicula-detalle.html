@@ -1,0 +1,125 @@
+<div class="detail-page container">
+  <a class="back-link" routerLink="/">← Volver a cartelera</a>
+
+  @if (pelicula(); as actual) {
+    <section class="detail-grid" aria-labelledby="movie-title">
+      <div class="detail-poster">
+        <img [src]="actual.imagen_url" [alt]="'Póster de ' + actual.titulo">
+        <span>UMBRAL / EN CARTELERA</span>
+      </div>
+
+      <div class="detail-copy">
+        <p class="eyebrow">PELÍCULA / {{ actual.generos.join(' · ') }}</p>
+        <h1 id="movie-title">{{ actual.titulo }}</h1>
+        <p class="lead">{{ actual.sinopsis }}</p>
+
+        <div class="detail-rating" aria-label="Calificación de la película">
+          <div>
+            <span class="meta-label">CALIFICACIÓN DEL PÚBLICO</span>
+            <app-calificacion-estrellas [valor]="promedio()" />
+          </div>
+          <strong>{{ promedio() ? promedio().toFixed(1) : '—' }}</strong>
+          <span>{{ cantidadResenas() ? cantidadResenas() + (cantidadResenas() === 1 ? ' reseña' : ' reseñas') : 'Sin reseñas todavía' }}</span>
+        </div>
+
+        <div class="meta-grid">
+          <div><span>DURACIÓN</span><strong>{{ actual.duracion_minutos | duracion }}</strong></div>
+          <div><span>CLASIFICACIÓN</span><strong>@switch(actual.clasificacion) { @case('ATP') { Apta para todo público } @default { Mayores de {{ actual.clasificacion }} años } }</strong></div>
+          <div><span>ESTRENO</span><strong>{{ fecha() }}</strong></div>
+          <div><span>ENTRADAS VENDIDAS</span><strong>{{ actual.entradas_vendidas }}</strong></div>
+        </div>
+
+        <p class="detail-note">Las funciones y la compra de entradas corresponden a la próxima etapa del trabajo práctico.</p>
+        <a class="button-primary" routerLink="/">Ver más películas ↗</a>
+      </div>
+    </section>
+
+    <section class="showtimes-section" aria-labelledby="showtimes-title">
+      <div class="showtimes-heading">
+        <div><p class="eyebrow">4.4 / FUNCIONES EN SALA</p><h2 id="showtimes-title">Elegí cuándo cruzar <em>el umbral.</em></h2></div>
+        <p>Horarios recurrentes, formato, idioma y sala asignada automáticamente según disponibilidad.</p>
+      </div>
+      @if (programacion.cargando()) { <p class="showtimes-state">Cargando funciones...</p> }
+      @if (programacion.error()) { <p class="showtimes-state">Las funciones todavía no están disponibles.</p> }
+      @if (!programacion.cargando() && !programacion.error()) {
+        <div class="showtimes-grid">
+          @for (funcion of funciones(); track funcion.id) {
+            <article class="showtime-card">
+              <div class="showtime-hour"><strong>{{ funcion.hora_inicio }}</strong><span>hasta {{ horaFinal(funcion) }}</span></div>
+              <div class="showtime-copy"><span>{{ funcion.formato }} / {{ funcion.idioma }}</span><h3>{{ diasFuncion(funcion) }}</h3><p>{{ funcion.sala_nombre }}</p></div>
+              <div class="showtime-rule"><span aria-hidden="true">✳</span><small>Sala asignada sin superposiciones<br>+30 min entre funciones</small></div>
+            </article>
+          } @empty { <p class="showtimes-state">Todavía no hay funciones programadas para esta película.</p> }
+        </div>
+      }
+    </section>
+
+    <section class="reviews-section" aria-labelledby="reviews-title">
+      <div class="section-heading">
+        <p class="eyebrow">4.3 / LA MIRADA DEL PÚBLICO</p>
+        <h2 id="reviews-title">Lo que dicen quienes <em>ya la vieron.</em></h2>
+        <p>Las reseñas aparecen antes de cualquier compra para que puedas elegir tu próxima función con más información.</p>
+      </div>
+
+      @if (resenasServicio.cargando()) {
+        <p class="reviews-state">Cargando reseñas...</p>
+      }
+      @if (resenasServicio.error(); as error) {
+        <p class="reviews-state error" role="alert">{{ error }}</p>
+      }
+      @if (!resenasServicio.cargando() && !resenasServicio.error()) {
+        @if (resenas().length) {
+          <div class="reviews-list">
+            @for (resena of resenas(); track resena.id) {
+              <article class="review-card">
+                <div class="review-top">
+                  <div class="review-author"><strong>{{ resena.autor_nombre }}</strong><span>{{ fechaResena(resena.creado_en) }}</span></div>
+                  <app-calificacion-estrellas [valor]="resena.estrellas" />
+                </div>
+                <p>{{ resena.comentario }}</p>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="reviews-state">Todavía no hay reseñas. Sé la primera persona en compartir su lectura.</p>
+        }
+      }
+
+      @if (auth.currentUserData(); as perfil) {
+        <form class="review-form" [formGroup]="resenaForm" (ngSubmit)="publicarResena()" novalidate>
+          <div class="form-heading">
+            <span class="eyebrow">TU RESEÑA / {{ perfil.nombre }}</span>
+            <h3>Dejá tu lectura en <em>pocas palabras.</em></h3>
+            <p>Una puntuación y un comentario corto alcanzan para orientar a la próxima persona.</p>
+          </div>
+
+          <div class="rating-field">
+            <span class="field-label">PUNTUACIÓN</span>
+            <app-calificacion-estrellas [valor]="estrellasElegidas()" [editable]="true" (cambio)="estrellasElegidas.set($event)" />
+            <small>{{ estrellasElegidas() ? estrellasElegidas() + (estrellasElegidas() === 1 ? ' estrella' : ' estrellas') : 'Elegí de 1 a 5 estrellas' }}</small>
+          </div>
+
+          <div class="form-field">
+            <label for="comentario">Comentario</label>
+            <textarea id="comentario" formControlName="comentario" rows="4" maxlength="280" placeholder="¿Qué te dejó la película?"></textarea>
+            <div class="character-count">{{ resenaForm.controls.comentario.value.length }}/280</div>
+            @if (resenaForm.controls.comentario.touched && resenaForm.controls.comentario.invalid) {
+              <small class="field-error">Escribí entre 5 y 280 caracteres.</small>
+            }
+          </div>
+
+          @if (formError()) { <p class="form-error" role="alert">{{ formError() }}</p> }
+          @if (formMensaje()) { <p class="form-success" role="status">{{ formMensaje() }}</p> }
+          <button class="button-primary" type="submit" [disabled]="enviandoResena()">{{ enviandoResena() ? 'Publicando...' : 'Publicar reseña ↗' }}</button>
+        </form>
+      } @else {
+        <div class="review-login">
+          <div><span class="eyebrow">¿YA VISTE LA PELÍCULA?</span><h3>Compartí tu opinión con la comunidad.</h3></div>
+          <a class="button-secondary" routerLink="/login">Ingresar para reseñar ↗</a>
+        </div>
+      }
+    </section>
+  } @else {
+    <div class="not-found"><span aria-hidden="true">✳</span><h1>Esta historia no está en cartelera.</h1><p>La película no existe o no está publicada.</p><a class="button-primary" routerLink="/">Volver a cartelera ↗</a></div>
+  }
+</div>
