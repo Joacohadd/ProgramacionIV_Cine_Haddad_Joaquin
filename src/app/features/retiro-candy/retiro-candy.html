@@ -1,0 +1,40 @@
+<section class="pickup-page container">
+  <a class="back-link" routerLink="/">← Volver a cartelera</a>
+  <header class="pickup-heading"><div><span class="eyebrow">PERSONAL / RETIRO DE CANDY</span><h1>Un mismo código, <em>todo el pedido.</em></h1></div><p>Leé el QR de la entrada y verificá los productos antes de entregarlos. El retiro del candy se registra por separado del ingreso a la sala.</p></header>
+
+  <div class="pickup-layout">
+    <form class="reader-panel" [formGroup]="form" (ngSubmit)="consultar()" novalidate>
+      <span class="panel-number">01</span><span class="eyebrow">LECTURA</span><h2>Contenido del QR</h2>
+      <p>Ingresá el texto leído por el escáner con el formato <strong>UMBRAL|CÓDIGO|TOKEN</strong>.</p>
+      <div class="form-field"><label for="qr-content">Código completo</label><textarea id="qr-content" formControlName="contenido" rows="4" spellcheck="false" placeholder="UMBRAL|UMB-XXXXXXXXXX|xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></textarea>@if (form.controls.contenido.touched && form.controls.contenido.invalid) { <small class="field-error">Ingresá el contenido completo de un QR de Umbral.</small> }</div>
+      <button class="button-primary" type="submit" [disabled]="servicio.procesando()">{{ servicio.procesando() ? 'Consultando...' : 'Identificar compra →' }}</button>
+    </form>
+
+    <section class="order-panel" aria-live="polite">
+      <span class="panel-number">02</span><span class="eyebrow">PEDIDO</span>
+      @if (servicio.error()) { <p class="form-error" role="alert">{{ servicio.error() }}</p> }
+      @if (servicio.mensaje()) { <p class="pickup-success" role="status">{{ servicio.mensaje() }}</p> }
+      @if (servicio.resultado(); as compra) {
+        <div class="order-head"><div><small>{{ compra.compra_codigo }}</small><h2>{{ compra.pelicula_titulo }}</h2><p>{{ fecha(compra.fecha_funcion) }} · {{ compra.hora_inicio }} · {{ compra.sala_nombre }}</p></div><span class="purchase-status" [class.valid]="compra.valida">{{ compra.valida ? 'VIGENTE' : compra.estado.toLocaleUpperCase() }}</span></div>
+        @if (compra.productos.length) {
+          <div class="products-to-pickup">
+            @for (producto of compra.productos; track producto.producto_id) {
+              <div><strong>{{ producto.cantidad }}</strong><span>{{ producto.nombre }}</span></div>
+            }
+          </div>
+          @if (compra.candy_retirado_en) {
+            <p class="already-picked"><strong>Pedido ya entregado.</strong><br>Registrado el {{ horaRetiro(compra.candy_retirado_en) }}.</p>
+          } @else if (!compra.valida) {
+            <p class="already-picked">La compra no está vigente y el pedido no puede entregarse.</p>
+          } @else {
+            <button class="button-primary deliver-action" type="button" (click)="servicio.confirmarRetiro()" [disabled]="servicio.procesando()">{{ servicio.procesando() ? 'Registrando...' : 'Confirmar entrega de candy ✓' }}</button>
+          }
+        } @else {
+          <p class="empty-order">Esta compra no contiene productos del candy bar.</p>
+        }
+      } @else if (!servicio.error()) {
+        <div class="waiting-order"><span aria-hidden="true">✦</span><p>El detalle de la compra aparecerá después de leer el QR.</p></div>
+      }
+    </section>
+  </div>
+</section>

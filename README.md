@@ -35,7 +35,36 @@ Aplicación web de un cine desarrollada con Angular, TypeScript, HTML y CSS. La 
 - Asignación automática de sala compatible.
 - Validación de duración, superposiciones y cruces de medianoche.
 
-Los puntos posteriores quedan fuera de esta entrega.
+### 4.5 Butacas y disponibilidad
+
+- Mapa de butacas dividido en tres bloques.
+- Selección y reserva temporal con actualización en tiempo real.
+- Filas J y K accesibles con distribución 2, 10 y 2.
+- Filas R, S y T VIP con precio diferencial.
+
+### 4.6 Compra, entradas y cancelaciones
+
+- Compra de las butacas reservadas para una función.
+- Control de edad según clasificación y aviso de acompañamiento adulto.
+- Uso total o parcial del crédito junto con otro medio de pago.
+- Entrada descargable en PDF con código QR validable por personal autorizado.
+- Historial de compras en el perfil.
+- Cancelación hasta 2 horas antes con reintegro en crédito.
+
+### 4.7 Candy bar y combos
+
+- Alta y edición de productos con nombre, descripción, precio e imagen opcional.
+- Publicación y ocultamiento desde administración.
+- Catálogo público con los productos publicados y sus precios.
+- Creación de categorías y asignación a cada producto.
+- Catálogo agrupado por categoría.
+- Productos del candy agregados a la misma compra de entradas.
+- Total, pago, comprobante e historial con el detalle conjunto.
+- Retiro del pedido con el mismo QR de la entrada y registro de la entrega.
+- Alta, edición y publicación de combos de entrada, pochoclos y bebida con precio fijo.
+- Combos destacados durante el proceso de compra.
+
+El retiro del candy y el acceso a sala se registran por separado para que una acción no bloquee la otra. Una compra cuyo pedido ya fue entregado no puede cancelarse con reintegro.
 
 ## Ejecutar
 
@@ -46,7 +75,7 @@ npm start
 
 La aplicación queda disponible en `http://localhost:4200`.
 
-Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar también `supabase/migrations/20260915_resenas.sql` y `supabase/migrations/20260916_funciones_salas.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
+Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar las migraciones pendientes en orden hasta `supabase/migrations/20260922_combos_retiro_candy.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
 
 ## Verificar
 

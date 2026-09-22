@@ -1,5 +1,5 @@
 import { Pelicula } from '../models/pelicula.interface';
-import { FuncionDetalle, FuncionEditable, Sala } from '../models/programacion.interface';
+import { Funcion, FuncionDetalle, FuncionEditable, Sala } from '../models/programacion.interface';
 
 const MINUTOS_DIA = 24 * 60;
 const MINUTOS_SEMANA = 7 * MINUTOS_DIA;
@@ -11,7 +11,9 @@ function minutosHora(hora: string): number {
 }
 
 export function capacidadSala(sala: Pick<Sala, 'filas' | 'butacas_izquierda' | 'butacas_centro' | 'butacas_derecha'>): number {
-  return sala.filas * (sala.butacas_izquierda + sala.butacas_centro + sala.butacas_derecha);
+  const butacasFilaGeneral = sala.butacas_izquierda + sala.butacas_centro + sala.butacas_derecha;
+  const filasAccesibles = Number(sala.filas >= 10) + Number(sala.filas >= 11);
+  return (sala.filas - filasAccesibles) * butacasFilaGeneral + filasAccesibles * 14;
 }
 
 export function horaFin(horaInicio: string, duracionMinutos: number): string {
@@ -19,6 +21,27 @@ export function horaFin(horaInicio: string, duracionMinutos: number): string {
   const horas = Math.floor((total % MINUTOS_DIA) / 60).toString().padStart(2, '0');
   const minutos = (total % 60).toString().padStart(2, '0');
   return `${horas}:${minutos}${total >= MINUTOS_DIA ? ' +1' : ''}`;
+}
+
+export function proximasFechasFuncion(
+  funcion: Pick<Funcion, 'fecha_desde' | 'fecha_hasta' | 'dias_semana'>,
+  desdeISO: string,
+  limite = 8
+): string[] {
+  const inicio = funcion.fecha_desde > desdeISO ? funcion.fecha_desde : desdeISO;
+  const cursor = new Date(`${inicio}T00:00:00Z`);
+  const fin = new Date(`${funcion.fecha_hasta}T00:00:00Z`);
+  const fechas: string[] = [];
+
+  while (cursor <= fin && fechas.length < limite) {
+    const diaSemana = cursor.getUTCDay() || 7;
+    if (funcion.dias_semana.includes(diaSemana as Funcion['dias_semana'][number])) {
+      fechas.push(cursor.toISOString().slice(0, 10));
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return fechas;
 }
 
 export function funcionesSeSuperponen(

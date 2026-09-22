@@ -1,0 +1,16 @@
+<article class="product-card">
+  <div class="product-image">
+    @if (producto().imagen_url && imagenFallida() !== producto().imagen_url) {
+      <img [src]="producto().imagen_url" [alt]="producto().nombre" loading="lazy" (error)="imagenFallida.set(producto().imagen_url)">
+    } @else {
+      <span class="product-initial" aria-hidden="true">{{ producto().nombre.charAt(0) }}</span>
+      <span class="image-caption" aria-hidden="true">UMBRAL / CANDY BAR</span>
+    }
+  </div>
+  <div class="product-content">
+    <span class="product-label">{{ categoria() }}</span>
+    <h3>{{ producto().nombre }}</h3>
+    <p>{{ producto().descripcion }}</p>
+    <div class="product-price"><span>PRECIO</span><strong>{{ precio(producto().precio_centavos) }}</strong></div>
+  </div>
+</article>

@@ -1,0 +1,119 @@
+<section class="seat-page container">
+  @if (funcion(); as funcionActual) {
+    <a class="back-link" [routerLink]="['/pelicula', funcionActual.pelicula_id]">← Volver a la película</a>
+
+    <header class="seat-heading">
+      <div>
+        <span class="eyebrow">4.5 / ELECCIÓN DE BUTACAS</span>
+        <h1>Tu lugar frente a <em>la pantalla.</em></h1>
+      </div>
+      <div class="function-ticket">
+        <span>{{ funcionActual.formato }} · {{ funcionActual.idioma }}</span>
+        <strong>{{ funcionActual.pelicula_titulo }}</strong>
+        <p>{{ funcionActual.sala_nombre }} / {{ funcionActual.hora_inicio }}</p>
+      </div>
+    </header>
+
+    @if (fechas().length) {
+      <nav class="date-picker" aria-label="Elegir fecha de la función">
+        <span>FECHA</span>
+        @for (fecha of fechas(); track fecha) {
+          <button
+            type="button"
+            [class.active]="fechaSeleccionada() === fecha"
+            [attr.aria-pressed]="fechaSeleccionada() === fecha"
+            [disabled]="butacas.guardando()"
+            (click)="seleccionarFecha(fecha)"
+          >{{ fechaLarga(fecha) }}</button>
+        }
+      </nav>
+
+      @if (butacas.error()) { <p class="page-message error" role="alert">{{ butacas.error() }}</p> }
+      @if (butacas.mensaje()) { <p class="page-message success" role="status">{{ butacas.mensaje() }}</p> }
+
+      <div class="seat-layout">
+        <section class="map-panel" aria-labelledby="map-title">
+          <div class="map-toolbar">
+            <div><span class="eyebrow">{{ sala()?.nombre }}</span><h2 id="map-title">Elegí tus ubicaciones</h2></div>
+            <div class="legend" aria-label="Referencias del mapa">
+              <span><i class="free"></i>Libre</span>
+              <span><i class="selected"></i>Elegida</span>
+              <span><i class="reserved"></i>Reservada</span>
+              <span><i class="accessible"></i>Accesible</span>
+              <span><i class="vip"></i>VIP</span>
+            </div>
+          </div>
+
+          <div class="seat-map-scroll">
+            <div class="seat-map">
+              <div class="screen"><span>PANTALLA</span></div>
+              <p class="screen-note">La fila A es la más cercana</p>
+
+              @if (butacas.cargando()) {
+                <p class="loading-map">Actualizando disponibilidad...</p>
+              }
+
+              <div class="rows" [class.updating]="butacas.guardando()">
+                @for (fila of mapa(); track fila.etiqueta) {
+                  <div class="seat-row" [class.accessible-row]="fila.tipo === 'accesible'" [class.vip-row]="fila.tipo === 'vip'">
+                    <strong class="row-label">{{ fila.etiqueta }}</strong>
+                    @for (sector of fila.sectores; track $index) {
+                      <div class="seat-sector" [class.accessible-sector]="fila.tipo === 'accesible'">
+                        @for (butaca of sector; track butaca.codigo) {
+                          <app-butaca [butaca]="butaca" [estado]="butacas.estado(butaca.codigo)" (cambio)="alternar($event)" />
+                        }
+                      </div>
+                    }
+                    <strong class="row-label end">{{ fila.etiqueta }}</strong>
+                    @if (fila.tipo === 'accesible') { <span class="row-kind">ACCESIBLE · 2 / 10 / 2</span> }
+                    @if (fila.tipo === 'vip') { <span class="row-kind">VIP</span> }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="selection-summary" aria-labelledby="summary-title">
+          <div class="summary-number">{{ cantidadTexto() }}</div>
+          <span class="eyebrow">TU SELECCIÓN</span>
+          <h2 id="summary-title">Butacas elegidas</h2>
+          <p class="summary-context">{{ fechaLarga(fechaSeleccionada()) }} · {{ funcionActual.hora_inicio }}<br>{{ funcionActual.sala_nombre }}</p>
+
+          <div class="price-key">
+            <span><i></i>General <strong>{{ precio(precioBase) }}</strong></span>
+            <span class="vip-price"><i></i>VIP <strong>{{ precio(precioBase + recargoVip) }}</strong></span>
+          </div>
+
+          <div class="selected-list">
+            @for (butaca of seleccionadasDetalle(); track butaca.codigo) {
+              <div>
+                <span><strong>{{ butaca.codigo }}</strong><small>{{ butaca.tipo === 'vip' ? 'VIP' : butaca.tipo === 'accesible' ? 'Accesible' : 'General' }}</small></span>
+                <strong>{{ precio(butaca.precio_centavos) }}</strong>
+              </div>
+            } @empty {
+              <p>Seleccioná una o más butacas en el mapa. Los lugares ocupados se actualizan en tiempo real.</p>
+            }
+          </div>
+
+          @if (butacas.expiraEn()) {
+            <p class="hold-note"><span aria-hidden="true">◷</span> Reserva vigente hasta las {{ horaExpiracion() }}</p>
+          }
+
+          <div class="summary-total"><span>TOTAL PARCIAL</span><strong>{{ precio(totalCentavos()) }}</strong></div>
+          <button class="button-primary" type="button" [disabled]="!butacas.cantidad() || butacas.guardando()" (click)="continuarCompra()">
+            {{ butacas.guardando() ? 'Reservando...' : 'Continuar a compra →' }}
+          </button>
+          <button class="clear-action" type="button" [disabled]="!butacas.cantidad() || butacas.guardando()" (click)="butacas.limpiar()">Limpiar selección</button>
+          <small class="next-step">La reserva se mantiene durante 8 minutos mientras completás la compra.</small>
+        </aside>
+      </div>
+    } @else {
+      <div class="empty-page"><span>Sin fechas</span><h2>Esta programación no tiene próximas funciones.</h2><a class="button-primary" [routerLink]="['/pelicula', funcionActual.pelicula_id]">Volver a la película</a></div>
+    }
+  } @else if (programacion.cargando()) {
+    <div class="empty-page"><span>Umbral</span><h2>Cargando la sala...</h2></div>
+  } @else {
+    <div class="empty-page"><span>404</span><h2>La función no está disponible.</h2><a class="button-primary" routerLink="/">Volver a cartelera</a></div>
+  }
+</section>

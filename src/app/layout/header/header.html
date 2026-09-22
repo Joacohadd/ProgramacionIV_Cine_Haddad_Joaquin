@@ -5,8 +5,12 @@
     <button class="menu-toggle" type="button" [attr.aria-expanded]="menuOpen()" aria-controls="nav-principal" (click)="menuOpen.set(!menuOpen())">Menú <span aria-hidden="true">☰</span></button>
     <nav id="nav-principal" class="main-nav" [class.open]="menuOpen()" aria-label="Navegación principal">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="menuOpen.set(false)">Cartelera</a>
+      <a routerLink="/candy" routerLinkActive="active" (click)="menuOpen.set(false)">Candy bar</a>
       <a *appRole="'admin'" routerLink="/admin/peliculas" routerLinkActive="active" (click)="menuOpen.set(false)">Películas</a>
       <a *appRole="'admin'" routerLink="/admin/programacion" routerLinkActive="active" (click)="menuOpen.set(false)">Funciones</a>
+      <a *appRole="'admin'" routerLink="/admin/productos" routerLinkActive="active" (click)="menuOpen.set(false)">Productos</a>
+      <a *appRole="'admin'" routerLink="/admin/combos" routerLinkActive="active" (click)="menuOpen.set(false)">Combos</a>
+      <a *appRole="['empleado', 'admin']" routerLink="/personal/retiro-candy" routerLinkActive="active" (click)="menuOpen.set(false)">Retiro candy</a>
       @if (auth.currentUserData()) {
         <a routerLink="/perfil" routerLinkActive="active" (click)="menuOpen.set(false)">Mi perfil</a>
         <button type="button" class="nav-text-button" (click)="salir()">Salir</button>

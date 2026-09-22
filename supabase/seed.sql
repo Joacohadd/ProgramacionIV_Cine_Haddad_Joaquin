@@ -28,3 +28,14 @@ insert into public.funciones (id, pelicula_id, sala_id, fecha_desde, fecha_hasta
 ('30000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001','2026-09-01','2026-10-31',array[2,4,6]::smallint[],'20:30','2D','Castellano',true),
 ('30000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000003','2026-09-01','2026-10-31',array[6,7]::smallint[],'16:00','5D','Castellano',true)
 on conflict (id) do nothing;
+
+-- Ocupaciones de muestra para visualizar la disponibilidad del punto 4.5.
+-- Las selecciones temporales se generan desde la aplicación y vencen a los 8 minutos.
+insert into public.reservas_butacas (
+  id, funcion_id, fecha_funcion, butaca_codigo, tipo, estado,
+  sesion_hash, precio_centavos, expira_en
+) values
+('40000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','2026-09-18','A-03','estandar','ocupada','sistema-seed',800000,null),
+('40000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000001','2026-09-18','J-05','accesible','ocupada','sistema-seed',800000,null),
+('40000000-0000-4000-8000-000000000003','30000000-0000-4000-8000-000000000001','2026-09-18','R-22','vip','ocupada','sistema-seed',1100000,null)
+on conflict (id) do nothing;

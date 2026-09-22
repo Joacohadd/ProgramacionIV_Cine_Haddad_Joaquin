@@ -1,0 +1,44 @@
+<section class="combos-admin container">
+  <a class="back-link" routerLink="/admin/productos">← Volver a productos</a>
+  <header class="admin-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN / COMBOS</span><h1>Una función, <em>todo resuelto.</em></h1></div>
+    <p>Configurá una entrada con pochoclos y bebida a un precio fijo. Los combos publicados se destacan durante la compra.</p>
+  </header>
+
+  @if (mensaje()) { <p class="form-success" role="status">{{ mensaje() }}</p> }
+  @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+  @if (servicio.error()) { <p class="form-error" role="alert">{{ servicio.error() }}</p> }
+
+  <div class="admin-layout">
+    <section class="combo-list" aria-labelledby="combo-list-title">
+      <div class="list-heading"><div><span class="eyebrow">RF-038</span><h2 id="combo-list-title">Combos configurados</h2></div><button class="button-primary" type="button" (click)="nuevo()" [disabled]="enviando()">Nuevo combo +</button></div>
+      @if (servicio.cargando()) {
+        <p class="empty-state">Cargando combos...</p>
+      } @else {
+        @for (combo of servicio.combos(); track combo.id) {
+          <article class="combo-row" [class.editing]="editandoId() === combo.id">
+            <div class="combo-state"><span [class.active]="combo.activo">{{ combo.activo ? 'DESTACADO' : 'OCULTO' }}</span><strong>{{ precio(combo.precio_centavos) }}</strong></div>
+            <div><h3>{{ combo.nombre }}</h3><p>{{ combo.descripcion }}</p><small>1 entrada + {{ servicio.nombreProducto(combo.pochoclos_producto_id) }} + {{ servicio.nombreProducto(combo.bebida_producto_id) }}</small></div>
+            <div class="row-actions"><button type="button" (click)="editar(combo)" [disabled]="enviando()">Editar ↗</button><button type="button" (click)="cambiarPublicacion(combo)" [disabled]="enviando()">{{ combo.activo ? 'Ocultar' : 'Publicar' }}</button></div>
+          </article>
+        } @empty {
+          <p class="empty-state">Todavía no hay combos. Creá el primero con el formulario.</p>
+        }
+      }
+    </section>
+
+    <form class="combo-form" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+      <span class="eyebrow">{{ editandoId() ? 'EDICIÓN' : 'NUEVO COMBO' }}</span>
+      <h2>{{ editandoId() ? 'Ajustar combo' : 'Armar un combo.' }}</h2>
+      <fieldset [disabled]="enviando() || servicio.cargando() || !!servicio.error()">
+        <div class="form-field"><label for="combo-name">Nombre</label><input id="combo-name" formControlName="nombre" maxlength="100" placeholder="Ej. Umbral clásico">@if (form.controls.nombre.touched && form.controls.nombre.invalid) { <small class="field-error">Ingresá un nombre de 2 a 100 caracteres.</small> }</div>
+        <div class="form-field"><label for="combo-description">Descripción</label><textarea id="combo-description" formControlName="descripcion" maxlength="300" rows="3" placeholder="Contá brevemente qué incluye"></textarea>@if (form.controls.descripcion.touched && form.controls.descripcion.invalid) { <small class="field-error">Ingresá una descripción de 5 a 300 caracteres.</small> }</div>
+        <div class="form-field"><label for="combo-popcorn">Pochoclos incluidos</label><select id="combo-popcorn" formControlName="pochoclos_producto_id"><option value="" disabled>Elegí un producto</option>@for (producto of servicio.productosPochoclos(); track producto.id) { <option [value]="producto.id">{{ producto.nombre }}</option> }</select>@if (form.controls.pochoclos_producto_id.touched && form.controls.pochoclos_producto_id.invalid) { <small class="field-error">Elegí un producto de Pochoclos.</small> }</div>
+        <div class="form-field"><label for="combo-drink">Bebida incluida</label><select id="combo-drink" formControlName="bebida_producto_id"><option value="" disabled>Elegí un producto</option>@for (producto of servicio.productosBebidas(); track producto.id) { <option [value]="producto.id">{{ producto.nombre }}</option> }</select>@if (form.controls.bebida_producto_id.touched && form.controls.bebida_producto_id.invalid) { <small class="field-error">Elegí un producto de Bebidas.</small> }</div>
+        <div class="form-field"><label for="combo-price">Precio fijo en pesos</label><input id="combo-price" type="number" formControlName="precio" min="0.01" max="21474836.47" step="0.01" placeholder="12500">@if (form.controls.precio.touched && form.controls.precio.invalid) { <small class="field-error">Ingresá un precio válido con hasta 2 decimales.</small> }</div>
+        <label class="publication-option"><input type="checkbox" formControlName="activo"><span>Destacar durante la compra<small>Solo aparece si los dos productos también están publicados.</small></span></label>
+        <div class="form-actions"><button class="button-primary" type="submit">{{ enviando() ? 'Guardando...' : editandoId() ? 'Guardar cambios ↗' : 'Crear combo ↗' }}</button>@if (editandoId()) { <button class="cancel-edit" type="button" (click)="nuevo()">Cancelar edición</button> }</div>
+      </fieldset>
+    </form>
+  </div>
+</section>

@@ -29,7 +29,7 @@
           <div><span>ENTRADAS VENDIDAS</span><strong>{{ actual.entradas_vendidas }}</strong></div>
         </div>
 
-        <p class="detail-note">Las funciones y la compra de entradas corresponden a la próxima etapa del trabajo práctico.</p>
+        <p class="detail-note">Elegí una función para ver la sala, la disponibilidad en tiempo real y seleccionar tus butacas.</p>
         <a class="button-primary" routerLink="/">Ver más películas ↗</a>
       </div>
     </section>
@@ -48,6 +48,7 @@
               <div class="showtime-hour"><strong>{{ funcion.hora_inicio }}</strong><span>hasta {{ horaFinal(funcion) }}</span></div>
               <div class="showtime-copy"><span>{{ funcion.formato }} / {{ funcion.idioma }}</span><h3>{{ diasFuncion(funcion) }}</h3><p>{{ funcion.sala_nombre }}</p></div>
               <div class="showtime-rule"><span aria-hidden="true">✳</span><small>Sala asignada sin superposiciones<br>+30 min entre funciones</small></div>
+              <a class="showtime-action" [routerLink]="['/funcion', funcion.id, 'butacas']">Elegir butacas →</a>
             </article>
           } @empty { <p class="showtimes-state">Todavía no hay funciones programadas para esta película.</p> }
         </div>

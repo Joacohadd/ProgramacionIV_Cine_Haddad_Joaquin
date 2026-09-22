@@ -1,0 +1,230 @@
+<section class="checkout-page container">
+  @if (compraFinalizada(); as compra) {
+    <div class="success-layout">
+      <section class="success-copy">
+        <span class="eyebrow">4.7 / COMPRA CONFIRMADA</span>
+        <h1>Tu entrada cruza <em>el umbral.</em></h1>
+        <p>Guardá el PDF. El mismo código QR sirve para ingresar a la sala y retirar el pedido del candy.</p>
+        <dl class="success-details">
+          <div><dt>Código</dt><dd>{{ compra.codigo }}</dd></div>
+          <div><dt>Película</dt><dd>{{ compra.pelicula_titulo }}</dd></div>
+          <div><dt>Función</dt><dd>{{ fechaLarga(compra.fecha_funcion) }} · {{ compra.hora_inicio }}</dd></div>
+          <div><dt>Sala</dt><dd>{{ compra.sala_nombre }} · {{ compra.formato }}</dd></div>
+          <div><dt>Butacas</dt><dd>@for (entrada of compra.entradas; track entrada.butaca_codigo) { <span>{{ entrada.butaca_codigo }}</span> }</dd></div>
+          @if (compra.combos.length) {
+            <div class="success-candy"><dt>Combos</dt><dd>@for (combo of compra.combos; track combo.combo_id) { <span>{{ combo.cantidad }}× {{ combo.nombre }}</span> }</dd></div>
+          }
+          @if (compra.productos.length) {
+            <div class="success-candy"><dt>Candy</dt><dd>@for (producto of compra.productos; track producto.producto_id) { <span>{{ producto.cantidad }}× {{ producto.nombre }}</span> }</dd></div>
+          }
+          <div><dt>Total</dt><dd>{{ precio(compra.total_centavos) }}</dd></div>
+        </dl>
+        @if (compra.aviso_adulto) {
+          <p class="adult-warning"><strong>Película con restricción.</strong> La entrada indica que se debe asistir con una persona adulta.</p>
+        }
+        @if (errorDocumento()) { <p class="form-error" role="alert">{{ errorDocumento() }}</p> }
+        <div class="success-actions">
+          <button class="button-primary" type="button" (click)="descargar(compra)">Descargar entrada PDF ↓</button>
+          @if (auth.currentUserData()) { <a class="button-outline" routerLink="/perfil">Ver mis compras</a> }
+          @else { <a class="button-outline" routerLink="/">Volver a cartelera</a> }
+        </div>
+      </section>
+      <aside class="qr-ticket">
+        <span>ACCESO / {{ compra.codigo }}</span>
+        @if (qrDataUrl()) { <img [src]="qrDataUrl()" alt="Código QR de la compra" width="320" height="320"> }
+        <strong>{{ compra.pelicula_titulo }}</strong>
+        <small>{{ compra.entradas.length }} {{ compra.entradas.length === 1 ? 'entrada' : 'entradas' }}@if (compra.productos.length) { · {{ compra.productos.length }} {{ compra.productos.length === 1 ? 'producto' : 'productos' }} } · {{ compra.idioma }}</small>
+        <code>{{ compras.contenidoQr(compra) }}</code>
+      </aside>
+    </div>
+  } @else if (funcion(); as funcionActual) {
+    @if (pelicula(); as peliculaActual) {
+      <a class="back-link" [routerLink]="['/funcion', funcionActual.id, 'butacas']" [queryParams]="{ fecha: fecha() }">← Volver a las butacas</a>
+      <header class="checkout-heading">
+        <div>
+          <span class="eyebrow">4.7 / COMPRA CONJUNTA</span>
+          <h1>Último paso antes de <em>la función.</em></h1>
+        </div>
+        <p>Revisá la reserva, completá los datos del comprador y elegí cómo abonar el saldo.</p>
+      </header>
+
+      @if (!fechaProgramada()) {
+        <div class="empty-checkout"><span>FECHA INVÁLIDA</span><h2>Esta fecha no corresponde a la programación elegida.</h2><a class="button-primary" [routerLink]="['/pelicula', funcionActual.pelicula_id]">Elegir otra función</a></div>
+      } @else {
+        @if (compras.error()) { <p class="form-error page-error" role="alert">{{ compras.error() }}</p> }
+        @if (butacas.error()) { <p class="form-error page-error" role="alert">{{ butacas.error() }}</p> }
+        <div class="checkout-layout">
+          <form class="checkout-form" [formGroup]="form" (ngSubmit)="confirmarCompra()">
+            <section class="form-section">
+              <div class="section-number">01</div>
+              <div class="section-content">
+                <span class="eyebrow">DATOS DEL COMPRADOR</span>
+                <h2>¿Quién va a la función?</h2>
+                @if (auth.currentUserData()) { <p class="section-note">Usamos los datos verificados de tu perfil para controlar la clasificación.</p> }
+                @else { <p class="section-note">La fecha de nacimiento se usa para validar la clasificación de la película.</p> }
+                <div class="field-grid">
+                  <div class="form-field">
+                    <label for="buyer-email">Correo electrónico</label>
+                    <input id="buyer-email" type="email" formControlName="email" autocomplete="email" [readOnly]="!!auth.currentUserData()">
+                    @if (form.controls.email.touched && form.controls.email.invalid) { <span class="field-error">Ingresá un correo válido.</span> }
+                  </div>
+                  <div class="form-field">
+                    <label for="buyer-birth">Fecha de nacimiento</label>
+                    <input id="buyer-birth" type="date" formControlName="fecha_nacimiento" [readOnly]="!!auth.currentUserData()">
+                    @if (form.controls.fecha_nacimiento.touched && form.controls.fecha_nacimiento.invalid) { <span class="field-error">Ingresá la fecha de nacimiento.</span> }
+                  </div>
+                </div>
+                @if (!edadPermitida()) {
+                  <p class="age-block" role="alert"><strong>Compra bloqueada.</strong> La clasificación {{ peliculaActual.clasificacion }} requiere tener {{ edadRequerida() }} años cumplidos en la fecha de la función.</p>
+                } @else if (peliculaActual.clasificacion !== 'ATP') {
+                  <p class="adult-notice"><strong>Clasificación {{ peliculaActual.clasificacion }}.</strong> La entrada incluirá el aviso de asistencia con una persona adulta.</p>
+                }
+              </div>
+            </section>
+
+            <section class="form-section">
+              <div class="section-number">02</div>
+              <div class="section-content">
+                <span class="eyebrow">CANDY BAR</span>
+                <h2>Sumá algo para la función</h2>
+                <p class="section-note">Los productos se agregan a esta misma compra. Podés continuar solamente con las entradas.</p>
+                @if (combos.cargando()) {
+                  <p class="candy-state">Cargando combos...</p>
+                } @else if (combos.error()) {
+                  <p class="form-error" role="alert">{{ combos.error() }}</p>
+                } @else if (combos.publicados().length) {
+                  <section class="featured-combos" aria-labelledby="featured-combos-title">
+                    <div class="featured-heading"><span>DESTACADOS / RF-039</span><h3 id="featured-combos-title">Entrada + pochoclos + bebida</h3><p>El precio fijo reemplaza el valor de una entrada de tu selección.</p></div>
+                    <div class="combo-options">
+                      @for (combo of combos.publicados(); track combo.id) {
+                        <article class="combo-option" [class.selected]="cantidadCombo(combo.id) > 0">
+                          <span class="combo-star" aria-hidden="true">✦</span>
+                          <div><strong>{{ combo.nombre }}</strong><p>{{ combo.descripcion }}</p><small>Incluye {{ combos.nombreProducto(combo.pochoclos_producto_id) }} + {{ combos.nombreProducto(combo.bebida_producto_id) }}</small><b>{{ precio(combo.precio_centavos) }}</b></div>
+                          <div class="quantity-control combo-quantity" [attr.aria-label]="'Cantidad de ' + combo.nombre">
+                            <button type="button" (click)="cambiarCantidadCombo(combo.id, -1)" [disabled]="cantidadCombo(combo.id) === 0" [attr.aria-label]="'Quitar un ' + combo.nombre">−</button>
+                            <output [attr.aria-label]="cantidadCombo(combo.id) + ' combos'">{{ cantidadCombo(combo.id) }}</output>
+                            <button type="button" (click)="cambiarCantidadCombo(combo.id, 1)" [disabled]="!puedeAgregarCombo() || cantidadCombo(combo.id) === 20" [attr.aria-label]="'Agregar un ' + combo.nombre">+</button>
+                          </div>
+                        </article>
+                      }
+                    </div>
+                    <p class="combo-limit">Podés elegir hasta un combo por entrada. Seleccionados: {{ cantidadCombos() }} de {{ entradas().length }}.</p>
+                  </section>
+                }
+                @if (candy.cargando()) {
+                  <p class="candy-state">Cargando productos...</p>
+                } @else if (candy.error()) {
+                  <p class="form-error" role="alert">{{ candy.error() }}</p>
+                } @else {
+                  <div class="checkout-candy">
+                    @for (grupo of candy.gruposPublicados(); track grupo.id) {
+                      <section class="candy-group" [attr.aria-labelledby]="'candy-group-' + grupo.id">
+                        <h3 [id]="'candy-group-' + grupo.id">{{ grupo.nombre }}</h3>
+                        <div class="candy-options">
+                          @for (producto of grupo.productos; track producto.id) {
+                            <article class="candy-option" [class.selected]="cantidadProducto(producto.id) > 0">
+                              <div>
+                                <strong>{{ producto.nombre }}</strong>
+                                <p>{{ producto.descripcion }}</p>
+                                <b>{{ precio(producto.precio_centavos) }}</b>
+                              </div>
+                              <div class="quantity-control" [attr.aria-label]="'Cantidad de ' + producto.nombre">
+                                <button type="button" (click)="cambiarCantidad(producto.id, -1)" [disabled]="cantidadProducto(producto.id) === 0" [attr.aria-label]="'Quitar una unidad de ' + producto.nombre">−</button>
+                                <output [attr.aria-label]="cantidadProducto(producto.id) + ' unidades'">{{ cantidadProducto(producto.id) }}</output>
+                                <button type="button" (click)="cambiarCantidad(producto.id, 1)" [disabled]="cantidadProducto(producto.id) === 20" [attr.aria-label]="'Agregar una unidad de ' + producto.nombre">+</button>
+                              </div>
+                            </article>
+                          }
+                        </div>
+                      </section>
+                    } @empty {
+                      <p class="candy-state">No hay productos publicados por el momento.</p>
+                    }
+                  </div>
+                }
+              </div>
+            </section>
+
+            <section class="form-section">
+              <div class="section-number">03</div>
+              <div class="section-content">
+                <span class="eyebrow">FORMA DE PAGO</span>
+                <h2>Combiná tu saldo</h2>
+                @if (auth.currentUserData()) {
+                  <label class="credit-option">
+                    <input type="checkbox" formControlName="usar_credito" [disabled]="creditoDisponible() === 0">
+                    <span><strong>Usar crédito en cuenta</strong><small>Disponible: {{ precio(creditoDisponible()) }}</small></span>
+                    <b>− {{ precio(creditoAplicado()) }}</b>
+                  </label>
+                } @else {
+                  <p class="account-note">Ingresá con una cuenta para aplicar crédito y poder cancelar la compra con reintegro en saldo.</p>
+                }
+                @if (saldoAPagar() > 0) {
+                  <div class="form-field payment-field">
+                    <label for="payment-method">Medio para el saldo restante</label>
+                    <select id="payment-method" formControlName="medio_pago">
+                      <option value="tarjeta_credito">Tarjeta de crédito</option>
+                      <option value="tarjeta_debito">Tarjeta de débito</option>
+                      <option value="billetera_virtual">Billetera virtual</option>
+                    </select>
+                    <small>El trabajo práctico registra el medio elegido; no solicita datos bancarios.</small>
+                  </div>
+                } @else {
+                  <p class="credit-covered">El crédito disponible cubre el total de la compra.</p>
+                }
+              </div>
+            </section>
+
+            <button class="button-primary purchase-action" type="submit" [disabled]="compras.procesando() || butacas.cargando() || !entradas().length || !edadPermitida()">
+              {{ compras.procesando() ? 'Confirmando compra...' : productosSeleccionados().length || combosSeleccionados().length ? 'Comprar entradas y candy →' : 'Comprar y generar entrada →' }}
+            </button>
+          </form>
+
+          <aside class="order-summary">
+            <span class="summary-index">04</span>
+            <span class="eyebrow">RESUMEN</span>
+            <h2>{{ peliculaActual.titulo }}</h2>
+            <p class="show-context">{{ fechaLarga(fecha()) }}<br>{{ funcionActual.hora_inicio }} · {{ funcionActual.sala_nombre }}<br>{{ funcionActual.formato }} · {{ funcionActual.idioma }}</p>
+            <div class="ticket-list">
+              @for (entrada of entradas(); track entrada.butaca_codigo) {
+                <div><span><strong>{{ entrada.butaca_codigo }}</strong><small>{{ entrada.tipo === 'vip' ? 'VIP' : entrada.tipo === 'accesible' ? 'Accesible' : 'General' }}</small></span><b>{{ precio(entrada.precio_centavos) }}</b></div>
+              } @empty {
+                <p>La reserva venció o no tiene butacas. Volvé al mapa para elegir tus lugares.</p>
+              }
+            </div>
+            @if (combosSeleccionados().length) {
+              <div class="summary-candy summary-combos">
+                <span>COMBOS DESTACADOS</span>
+                @for (combo of combosSeleccionados(); track combo.combo_id) {
+                  <div><span>{{ combo.cantidad }}× {{ combo.nombre }}</span><strong>{{ precio(combo.subtotal_centavos) }}</strong></div>
+                }
+              </div>
+            }
+            @if (productosSeleccionados().length) {
+              <div class="summary-candy">
+                <span>CANDY BAR</span>
+                @for (producto of productosSeleccionados(); track producto.producto_id) {
+                  <div><span>{{ producto.cantidad }}× {{ producto.nombre }}</span><strong>{{ precio(producto.subtotal_centavos) }}</strong></div>
+                }
+              </div>
+            }
+            <div class="summary-line"><span>{{ combosSeleccionados().length ? 'Entradas fuera de combo' : 'Entradas' }}</span><strong>{{ precio(subtotalEntradas()) }}</strong></div>
+            @if (subtotalCombos()) { <div class="summary-line"><span>Combos</span><strong>{{ precio(subtotalCombos()) }}</strong></div> }
+            @if (subtotalCandy()) { <div class="summary-line"><span>Candy bar</span><strong>{{ precio(subtotalCandy()) }}</strong></div> }
+            @if (creditoAplicado()) { <div class="summary-line"><span>Crédito aplicado</span><strong>− {{ precio(creditoAplicado()) }}</strong></div> }
+            <div class="summary-total"><span>TOTAL A PAGAR</span><strong>{{ precio(saldoAPagar()) }}</strong></div>
+            @if (butacas.expiraEn()) {
+              <p class="hold-note">Reserva vigente hasta las {{ horaExpiracion() }}.</p>
+            } @else {
+              <p class="hold-note">La compra debe completarse antes de que venza la reserva temporal.</p>
+            }
+          </aside>
+        </div>
+      }
+    }
+  } @else if (programacion.cargando()) {
+    <div class="empty-checkout"><span>UMBRAL</span><h2>Preparando tu compra...</h2></div>
+  } @else {
+    <div class="empty-checkout"><span>404</span><h2>La función no está disponible.</h2><a class="button-primary" routerLink="/">Volver a cartelera</a></div>
+  }
+</section>

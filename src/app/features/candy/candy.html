@@ -1,0 +1,23 @@
+<section class="candy-page container">
+  <a class="back-link" routerLink="/">← Volver a cartelera</a>
+  <header class="candy-heading">
+    <div><span class="eyebrow">UMBRAL / CANDY BAR</span><h1>Algo rico para <em>tu función.</em></h1></div>
+    <div class="candy-intro"><p>Explorá nuestro candy bar por categoría y elegí qué acompañará tu próxima función.</p><a *appRole="'admin'" class="button-outline" routerLink="/admin/productos">Administrar productos ↗</a></div>
+  </header>
+  @if (servicio.cargando()) {
+    <p class="catalog-message" role="status">Cargando los productos...</p>
+  } @else if (servicio.error()) {
+    <div class="catalog-message"><p role="alert">{{ servicio.error() }}</p><button class="button-outline" type="button" (click)="servicio.cargar()">Reintentar</button></div>
+  } @else {
+    @for (grupo of servicio.gruposPublicados(); track grupo.id) {
+      <section class="category-group" [attr.aria-labelledby]="'category-' + grupo.id">
+        <header class="category-heading"><h2 [id]="'category-' + grupo.id">{{ grupo.nombre }}</h2><span>{{ grupo.productos.length }} {{ grupo.productos.length === 1 ? 'producto' : 'productos' }}</span></header>
+        <div class="product-grid">
+          @for (producto of grupo.productos; track producto.id) { <app-producto-card [producto]="producto" [categoria]="grupo.nombre" /> }
+        </div>
+      </section>
+    } @empty {
+      <p class="catalog-message">Todavía no hay productos publicados. Volvé a visitarnos pronto.</p>
+    }
+  }
+</section>

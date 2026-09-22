@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PELICULAS_DEMO } from '../data/peliculas-demo';
 import { FuncionDetalle, FuncionEditable, Sala } from '../models/programacion.interface';
-import { buscarSalaDisponible, capacidadSala, funcionesSeSuperponen, horaFin } from './planificacion';
+import { buscarSalaDisponible, capacidadSala, funcionesSeSuperponen, horaFin, proximasFechasFuncion } from './planificacion';
 
 const base: FuncionEditable = {
   pelicula_id: 'demo-1', fecha_desde: '2026-09-01', fecha_hasta: '2026-10-31',
@@ -30,7 +30,13 @@ describe('planificación de funciones', () => {
   });
 
   it('calcula capacidad y horario de finalización', () => {
-    expect(capacidadSala({ filas: 20, butacas_izquierda: 4, butacas_centro: 20, butacas_derecha: 4 })).toBe(560);
+    expect(capacidadSala({ filas: 20, butacas_izquierda: 4, butacas_centro: 20, butacas_derecha: 4 })).toBe(532);
     expect(horaFin('23:00', 120)).toBe('01:00 +1');
+  });
+
+  it('obtiene solamente las próximas fechas válidas de una programación', () => {
+    expect(proximasFechasFuncion({ ...base, dias_semana: [1, 3, 5] }, '2026-09-17', 4)).toEqual([
+      '2026-09-18', '2026-09-21', '2026-09-23', '2026-09-25'
+    ]);
   });
 });

@@ -46,6 +46,20 @@ export class AuthService {
     return this.currentUserData();
   }
 
+  async recargarPerfil(): Promise<void> {
+    const usuario = this.currentUser();
+    if (usuario) await this.cargarPerfil(usuario.id);
+  }
+
+  actualizarCreditoDemo(creditoCentavos: number): void {
+    if (!this.demo) return;
+    const perfil = this.currentUserData();
+    if (!perfil) return;
+    const actualizado = { ...perfil, credito_centavos: Math.max(0, Math.round(creditoCentavos)) };
+    this.currentUserData.set(actualizado);
+    if (perfil.id !== 'demo-admin') localStorage.setItem(DEMO_PERFIL_KEY, JSON.stringify(actualizado));
+  }
+
   private async cargarPerfil(id: string): Promise<void> {
     const client = this.supabase.client;
     if (!client) return;

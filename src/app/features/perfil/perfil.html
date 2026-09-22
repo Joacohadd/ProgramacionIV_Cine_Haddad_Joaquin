@@ -1,1 +1,51 @@
-<section class="profile-page"><div class="container"><a class="back-link" routerLink="/">← Volver a cartelera</a>@if(auth.currentUserData(); as perfil) { <div class="profile-header"><span class="eyebrow">MI PERFIL / UMBRAL CINE</span><h1>Hola, <em>{{ perfil.nombre }}.</em></h1><p>Todo lo que necesitás saber sobre tu cuenta, en un solo lugar.</p></div><div class="profile-grid"><section class="profile-card personal"><div class="card-heading"><span>01 / DATOS PERSONALES</span><span aria-hidden="true">✳</span></div><h2>Tu información</h2><dl><div><dt>Nombre completo</dt><dd>{{ perfil.nombre }} {{ perfil.apellido }}</dd></div><div><dt>Correo</dt><dd>{{ perfil.email }}</dd></div><div><dt>Fecha de nacimiento</dt><dd>{{ nacimiento() }}</dd></div><div><dt>Tipo de sangre</dt><dd>{{ perfil.tipo_sangre }}</dd></div><div><dt>Color de ojos</dt><dd>{{ perfil.color_ojos }}</dd></div><div><dt>Vacaciones por año</dt><dd>{{ perfil.dias_vacaciones }} días</dd></div></dl></section><section class="profile-card benefits"><div class="card-heading"><span>02 / BENEFICIOS</span><span aria-hidden="true">↗</span></div><h2>Tu saldo</h2><div class="balance"><span>CRÉDITO EN CUENTA</span><strong>{{ credito() }}</strong><p>El uso del crédito en la compra se implementará con el flujo de pagos.</p></div><div class="balance"><span>PUNTOS ACUMULADOS</span><strong>{{ perfil.puntos }}</strong><p>El programa de puntos y los canjes forman parte de la próxima etapa.</p></div></section></div>@if(auth.demo) { <p class="demo-profile-note">Este perfil es una muestra local. Para registro y datos persistentes entre dispositivos, configurá Supabase.</p> } } @else { <p>Cargando perfil...</p> }</div></section>
+<section class="profile-page">
+  <div class="container">
+    <a class="back-link" routerLink="/">← Volver a cartelera</a>
+    @if(auth.currentUserData(); as perfil) {
+      <div class="profile-header"><span class="eyebrow">MI PERFIL / UMBRAL CINE</span><h1>Hola, <em>{{ perfil.nombre }}.</em></h1><p>Todo lo que necesitás saber sobre tu cuenta, en un solo lugar.</p></div>
+      <div class="profile-grid">
+        <section class="profile-card personal">
+          <div class="card-heading"><span>01 / DATOS PERSONALES</span><span aria-hidden="true">✳</span></div><h2>Tu información</h2>
+          <dl><div><dt>Nombre completo</dt><dd>{{ perfil.nombre }} {{ perfil.apellido }}</dd></div><div><dt>Correo</dt><dd>{{ perfil.email }}</dd></div><div><dt>Fecha de nacimiento</dt><dd>{{ nacimiento() }}</dd></div><div><dt>Tipo de sangre</dt><dd>{{ perfil.tipo_sangre }}</dd></div><div><dt>Color de ojos</dt><dd>{{ perfil.color_ojos }}</dd></div><div><dt>Vacaciones por año</dt><dd>{{ perfil.dias_vacaciones }} días</dd></div></dl>
+        </section>
+        <section class="profile-card benefits">
+          <div class="card-heading"><span>02 / BENEFICIOS</span><span aria-hidden="true">↗</span></div><h2>Tu saldo</h2>
+          <div class="balance"><span>CRÉDITO EN CUENTA</span><strong>{{ credito() }}</strong><p>Podés combinar este crédito con otro medio de pago en tu próxima compra.</p></div>
+          <div class="balance"><span>PUNTOS ACUMULADOS</span><strong>{{ perfil.puntos }}</strong><p>El programa de puntos y los canjes forman parte de la próxima etapa.</p></div>
+        </section>
+      </div>
+
+      <section class="purchases" aria-labelledby="purchases-title">
+        <header><div><span class="eyebrow">03 / ENTRADAS Y CANCELACIONES</span><h2 id="purchases-title">Mis compras</h2></div><p>Podés cancelar hasta 2 horas antes de la función. El reintegro se suma al crédito de tu cuenta.</p></header>
+        @if (compras.error()) { <p class="form-error" role="alert">{{ compras.error() }}</p> }
+        @if (compras.mensaje()) { <p class="form-success" role="status">{{ compras.mensaje() }}</p> }
+        @if (errorDocumento()) { <p class="form-error" role="alert">{{ errorDocumento() }}</p> }
+        @if (compras.cargando()) {
+          <p class="purchase-empty">Cargando tus compras...</p>
+        } @else {
+          <div class="purchase-list">
+            @for (compra of compras.compras(); track compra.id) {
+              <article class="purchase-item" [class.cancelled]="compra.estado === 'cancelada'">
+                <div class="purchase-code"><span>{{ compra.estado === 'pagada' ? 'VIGENTE' : 'CANCELADA' }}</span><strong>{{ compra.codigo }}</strong></div>
+                <div class="purchase-main"><h3>{{ compra.pelicula_titulo }}</h3><p>{{ fechaFuncion(compra) }} · {{ compra.hora_inicio }}<br>{{ compra.sala_nombre }} · {{ compra.formato }} · {{ compra.idioma }}</p>@if (compra.combos.length) { <p class="purchase-candy"><span>COMBOS</span>@for (combo of compra.combos; track combo.combo_id) { {{ combo.cantidad }}× {{ combo.nombre }}@if (!$last) { · } }</p> }@if (compra.productos.length) { <p class="purchase-candy"><span>CANDY</span>@for (producto of compra.productos; track producto.producto_id) { {{ producto.cantidad }}× {{ producto.nombre }}@if (!$last) { · } }</p> }@if (compra.candy_retirado_en) { <p class="purchase-candy"><span>RETIRO</span>Pedido entregado</p> }</div>
+                <div class="purchase-seats"><span>BUTACAS</span><strong>@for (entrada of compra.entradas; track entrada.butaca_codigo) { {{ entrada.butaca_codigo }}@if (!$last) { · } }</strong></div>
+                <div class="purchase-total"><span>TOTAL</span><strong>{{ precio(compra.total_centavos) }}</strong></div>
+                <div class="purchase-actions">
+                  @if (compra.estado === 'pagada') {
+                    <button type="button" class="ticket-action" (click)="descargar(compra)">Descargar PDF</button>
+                    @if (compras.puedeCancelar(compra)) {
+                      <button type="button" class="cancel-action" [disabled]="compras.procesando()" (click)="cancelar(compra)">Cancelar y acreditar saldo</button>
+                    } @else { <small>{{ compra.candy_retirado_en ? 'Candy retirado: no cancelable' : 'Fuera del plazo de cancelación' }}</small> }
+                  } @else { <small>Reintegrada como crédito</small> }
+                </div>
+              </article>
+            } @empty {
+              <p class="purchase-empty">Todavía no tenés compras asociadas a esta cuenta.</p>
+            }
+          </div>
+        }
+      </section>
+      @if(auth.demo) { <p class="demo-profile-note">Este perfil es una muestra local. Para registro y datos persistentes entre dispositivos, configurá Supabase.</p> }
+    } @else { <p>Cargando perfil...</p> }
+  </div>
+</section>

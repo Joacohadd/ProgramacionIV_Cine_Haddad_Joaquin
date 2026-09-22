@@ -1,0 +1,12 @@
+.candy-page { padding: 3rem 0 7rem; min-height: 75vh; }
+.back-link, .eyebrow { color: var(--coral); }
+.candy-heading { display: grid; grid-template-columns: 1.4fr .6fr; gap: 5rem; align-items: end; border-bottom: 1px solid #596457; padding: 5rem 0 3rem; }
+h1 { font: 600 clamp(3.5rem, 6.5vw, 6.5rem)/.95 var(--display); letter-spacing: -.06em; max-width: 800px; margin: 1rem 0 0; }
+h1 em { color: var(--coral); font-weight: 500; }
+.candy-intro p { color: #bdc6b9; max-width: 340px; margin: 0 0 1.5rem; }
+.product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+.category-group { margin-top: 3rem; }
+.category-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; border-bottom: 1px solid #596457; padding-bottom: .8rem; }
+.category-heading h2 { font: 600 2.6rem/1.1 var(--display); letter-spacing: -.04em; margin: 0; overflow-wrap: anywhere; }
+.category-heading span { color: #bdc6b9; font-size: .72rem; white-space: nowrap; }
+.catalog-message { grid-column: 1 / -1; padding: 4rem 0; color: #bdc6b9; }

@@ -1,0 +1,86 @@
+<section class="admin-page container">
+  <a class="back-link" routerLink="/admin/peliculas">← Volver a administración</a>
+  <header class="admin-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN / CANDY BAR</span><h1>El sabor de <em>la función.</em></h1><p>Organizá tus productos por categoría, actualizá sus precios y elegí cuáles ofrecer en el catálogo.</p></div>
+    <div class="admin-heading-actions"><a class="button-outline" routerLink="/admin/combos">Administrar combos</a><a class="button-outline" routerLink="/candy">Ver catálogo ↗</a></div>
+  </header>
+
+  @if (mensaje()) { <p class="admin-success" role="status">{{ mensaje() }}</p> }
+  @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+  <div class="admin-layout">
+    <section class="inventory" aria-labelledby="inventory-title">
+      <div class="inventory-heading"><h2 id="inventory-title">Productos</h2><button class="button-primary" type="button" [disabled]="enviando() || enviandoCategoria()" (click)="nuevo()">Nuevo producto +</button></div>
+      @if (servicio.cargando()) {
+        <p class="list-message" role="status">Cargando productos...</p>
+      } @else if (servicio.error()) {
+        <div class="list-message"><p role="alert">{{ servicio.error() }}</p><button class="button-outline" type="button" (click)="servicio.cargar()">Reintentar</button></div>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">PRODUCTO</th><th scope="col">CATEGORÍA</th><th scope="col">PRECIO</th><th scope="col">ESTADO</th><th scope="col">ACCIONES</th></tr></thead>
+            <tbody>
+              @for (producto of servicio.productos(); track producto.id) {
+                <tr [class.editing]="editandoId() === producto.id">
+                  <td><strong class="product-name">{{ producto.nombre }}</strong><p class="product-description">{{ producto.descripcion }}</p></td>
+                  <td class="category-cell">{{ servicio.nombreCategoria(producto.categoria_id) }}</td>
+                  <td class="price-cell">{{ precio(producto.precio_centavos) }}</td>
+                  <td><span class="status" [class.published]="producto.activo">{{ producto.activo ? 'Publicado' : 'Oculto' }}</span></td>
+                  <td><div class="row-actions"><button type="button" [disabled]="enviando() || enviandoCategoria()" [attr.aria-label]="'Editar ' + producto.nombre" (click)="editar(producto)">Editar ↗</button><button type="button" [disabled]="enviando() || enviandoCategoria()" [attr.aria-label]="(producto.activo ? 'Ocultar ' : 'Publicar ') + producto.nombre" (click)="cambiarPublicacion(producto)">{{ producto.activo ? 'Ocultar' : 'Publicar' }}</button></div></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="list-message">Todavía no hay productos. Completá el formulario para crear el primero.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      <section class="category-editor" aria-labelledby="categories-title">
+        <span class="eyebrow">ORGANIZACIÓN DEL CATÁLOGO</span>
+        <h2 id="categories-title">Categorías</h2>
+        <p>Elegí una categoría al crear o editar un producto. También podés agregar una nueva.</p>
+        <ul class="category-list" aria-label="Categorías disponibles">
+          @for (categoria of servicio.categorias(); track categoria.id) { <li>{{ categoria.nombre }}</li> }
+        </ul>
+        <form [formGroup]="categoriaForm" (ngSubmit)="crearCategoria()" novalidate>
+          <div class="form-field"><label for="category-name">Nueva categoría</label><input id="category-name" formControlName="nombre" maxlength="60" placeholder="Ej. Snacks">
+            @if (categoriaForm.controls.nombre.touched && categoriaForm.controls.nombre.invalid) { <small class="field-error">Ingresá un nombre de 2 a 60 caracteres.</small> }
+          </div>
+          <button class="button-primary" type="submit" [disabled]="enviando() || enviandoCategoria() || servicio.cargando() || !!servicio.error()">{{ enviandoCategoria() ? 'Creando...' : 'Crear categoría +' }}</button>
+        </form>
+      </section>
+    </section>
+
+    <form class="product-form" [formGroup]="form" (ngSubmit)="guardar()" novalidate aria-labelledby="product-form-title">
+      <span class="eyebrow">{{ editandoId() ? 'EDICIÓN DE PRODUCTO' : 'ALTA DE PRODUCTO' }}</span>
+      <h2 id="product-form-title">{{ editandoId() ? 'Editar producto' : 'Un nuevo antojo.' }}</h2>
+      <fieldset [disabled]="enviando() || enviandoCategoria() || servicio.cargando() || !!servicio.error()">
+        <div class="form-field">
+          <label for="product-name">Nombre</label><input id="product-name" formControlName="nombre" maxlength="100" placeholder="Ej. Pochoclos grandes">
+          @if (form.controls.nombre.touched && form.controls.nombre.invalid) { <small class="field-error">Ingresá un nombre de 2 a 100 caracteres.</small> }
+        </div>
+        <div class="form-field">
+          <label for="product-description">Descripción</label><textarea id="product-description" formControlName="descripcion" rows="3" maxlength="500" placeholder="Tamaño, presentación o sabor"></textarea>
+          @if (form.controls.descripcion.touched && form.controls.descripcion.invalid) { <small class="field-error">Ingresá una descripción de 5 a 500 caracteres.</small> }
+        </div>
+        <div class="form-field">
+          <label for="product-category">Categoría</label>
+          <select id="product-category" formControlName="categoria_id">
+            <option value="" disabled>Elegí una categoría</option>
+            @for (categoria of servicio.categorias(); track categoria.id) { <option [value]="categoria.id">{{ categoria.nombre }}</option> }
+          </select>
+          @if (form.controls.categoria_id.touched && form.controls.categoria_id.invalid) { <small class="field-error">Elegí una categoría para este producto.</small> }
+        </div>
+        <div class="form-field">
+          <label for="product-price">Precio en pesos (ARS)</label><input id="product-price" type="number" formControlName="precio" min="0.01" max="21474836.47" step="0.01" placeholder="5500">
+          @if (form.controls.precio.touched && form.controls.precio.invalid) { <small class="field-error">Usá un valor entre $0,01 y $21.474.836,47, con hasta 2 decimales.</small> }
+        </div>
+        <div class="form-field">
+          <label for="product-image">URL de imagen <span>(opcional)</span></label><input id="product-image" type="url" formControlName="imagen_url" placeholder="https://...">
+          @if (form.controls.imagen_url.touched && form.controls.imagen_url.invalid) { <small class="field-error">Usá una dirección que comience con https://.</small> }
+        </div>
+        <label class="publication-option"><input type="checkbox" formControlName="activo"><span>Publicar en el candy bar<small>Los productos ocultos solo se ven en administración.</small></span></label>
+        <div class="form-actions"><button type="submit" class="button-primary">{{ enviando() ? 'Guardando...' : editandoId() ? 'Guardar cambios ↗' : 'Crear producto ↗' }}</button>@if (editandoId()) { <button type="button" class="cancel-edit" (click)="nuevo()">Cancelar edición</button> }</div>
+      </fieldset>
+    </form>
+  </div>
+</section>

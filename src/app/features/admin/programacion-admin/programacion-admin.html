@@ -98,6 +98,7 @@
           <div class="form-field"><label for="centro">Bloque centro</label><input id="centro" type="number" min="1" max="50" formControlName="butacas_centro"></div>
           <div class="form-field"><label for="derecha">Bloque der.</label><input id="derecha" type="number" min="1" max="50" formControlName="butacas_derecha"></div>
         </div>
+        <div class="auto-room wide"><span aria-hidden="true">♿</span><p><strong>Filas J y K adaptadas.</strong> El mapa aplica automáticamente la distribución accesible de 2, 10 y 2 ubicaciones.</p></div>
         <fieldset class="format-field wide"><legend>Formatos compatibles</legend><div>@for(formato of formatos; track formato) { <button type="button" [class.selected]="formatosSeleccionados().includes(formato)" [attr.aria-pressed]="formatosSeleccionados().includes(formato)" (click)="toggleFormato(formato)">{{ formato }}</button> }</div></fieldset>
         <label class="active-check wide"><input type="checkbox" formControlName="activa"><span>Sala operativa</span></label>
         @if (errorSala()) { <p class="form-error wide" role="alert">{{ errorSala() }}</p> }

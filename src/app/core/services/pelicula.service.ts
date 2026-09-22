@@ -92,4 +92,12 @@ export class PeliculaService {
       ? { ...pelicula, promedio_calificacion: promedio, cantidad_resenas: cantidad }
       : pelicula));
   }
+
+  actualizarEntradasVendidasDemo(peliculaId: string, diferencia: number): void {
+    if (this.supabase.client) return;
+    const peliculas = this.peliculas().map(pelicula => pelicula.id === peliculaId
+      ? { ...pelicula, entradas_vendidas: Math.max(0, pelicula.entradas_vendidas + diferencia) }
+      : pelicula);
+    this.guardarDemo(peliculas);
+  }
 }

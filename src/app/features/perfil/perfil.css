@@ -20,5 +20,28 @@ dd { margin: .35rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
 .balance strong { display: block; font-family: var(--display); font-size: 3rem; letter-spacing: -.06em; font-weight: 500; margin: .25rem 0; }
 .balance p { font-size: .76rem; color: #bdc8bb; max-width: 330px; }
 .demo-profile-note { margin-top: 2rem; color: #5b6557; font-size: .78rem; }
+.purchases { margin-top: 5rem; }
+.purchases > header { display: grid; grid-template-columns: 1fr 420px; gap: 3rem; align-items: end; padding-bottom: 1.5rem; border-bottom: 1px solid #a4aa9e; }
+.purchases > header .eyebrow { color: var(--coral-dark); }
+.purchases > header h2 { margin: .5rem 0 0; font-family: var(--display); font-size: 4rem; line-height: .9; letter-spacing: -.06em; }
+.purchases > header p { margin: 0; color: #60695d; font-size: .8rem; line-height: 1.6; }
+.purchase-list { border-bottom: 1px solid #a4aa9e; }
+.purchase-item { display: grid; grid-template-columns: 150px 1.5fr 1fr 130px 210px; gap: 1.5rem; align-items: center; padding: 1.5rem 0; border-top: 1px solid #c2c7bc; }
+.purchase-item:first-child { border-top: 0; }
+.purchase-item.cancelled { opacity: .55; }
+.purchase-code, .purchase-seats, .purchase-total { display: flex; flex-direction: column; gap: .25rem; }
+.purchase-code span, .purchase-seats span, .purchase-total span { color: #6b7466; font-size: .58rem; font-weight: 700; letter-spacing: .12em; }
+.purchase-code > span { color: var(--coral-dark); }
+.purchase-main h3 { margin: 0; font-family: var(--display); font-size: 1.55rem; }
+.purchase-main p { margin: .25rem 0 0; color: #60695d; font-size: .7rem; line-height: 1.5; text-transform: capitalize; }
+.purchase-main .purchase-candy { margin-top: .6rem; color: #3f493d; text-transform: none; }
+.purchase-candy span { margin-right: .45rem; color: var(--coral-dark); font-size: .56rem; font-weight: 700; letter-spacing: .1em; }
+.purchase-total strong { font-family: var(--display); font-size: 1.35rem; }
+.purchase-actions { display: grid; gap: .4rem; justify-items: stretch; }
+.purchase-actions button { border: 0; padding: .55rem .75rem; font-size: .63rem; font-weight: 700; letter-spacing: .05em; }
+.ticket-action { background: var(--ink); color: var(--cream); }
+.cancel-action { background: transparent; color: var(--coral-dark); text-decoration: underline; }
+.purchase-actions small { color: #737c70; font-size: .62rem; }
+.purchase-empty { padding: 3rem 0; color: #657060; }
 @media(max-width: 780px) { .profile-grid { grid-template-columns: 1fr; } }
 @media(max-width: 500px) { dl { grid-template-columns: 1fr; } }

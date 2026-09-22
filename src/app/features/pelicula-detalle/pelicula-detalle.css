@@ -24,7 +24,7 @@
 .showtimes-heading h2 em { color: var(--coral); font-weight: 500; }
 .showtimes-heading > p { margin: 0; color: #aeb9aa; line-height: 1.65; }
 .showtimes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border: 1px solid #556253; background: #556253; }
-.showtime-card { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 1.4rem; align-items: center; min-height: 150px; padding: 1.35rem; background: var(--ink); }
+.showtime-card { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto auto; gap: 1.4rem; align-items: center; min-height: 150px; padding: 1.35rem; background: var(--ink); }
 .showtime-hour { display: grid; gap: .2rem; border-right: 1px solid #556253; }
 .showtime-hour strong { color: var(--coral); font-family: var(--display); font-size: 2.5rem; font-weight: 500; line-height: 1; }
 .showtime-hour span { color: #899586; font-size: .68rem; }
@@ -34,6 +34,8 @@
 .showtime-rule { display: flex; align-items: center; gap: .55rem; color: #879584; }
 .showtime-rule > span { color: var(--coral); font-size: 1.3rem; }
 .showtime-rule small { font-size: .58rem; line-height: 1.45; }
+.showtime-action { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; border: 1px solid #7f8d7b; border-radius: 100px; padding: .65rem .85rem; color: var(--cream); font-size: .62rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; text-decoration: none; white-space: nowrap; }
+.showtime-action:hover { border-color: var(--coral); background: var(--coral); color: var(--ink); }
 .showtimes-state { grid-column: 1 / -1; border: 1px solid #556253; padding: 1.2rem; color: #aeb9aa; }
 .reviews-section { border-top: 1px solid #556253; margin-top: clamp(4rem, 9vw, 8rem); padding-top: clamp(3rem, 6vw, 5rem); }
 .section-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .85fr); column-gap: 4rem; align-items: end; margin-bottom: 2.6rem; }

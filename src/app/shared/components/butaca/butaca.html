@@ -1,0 +1,16 @@
+<button
+  type="button"
+  class="seat"
+  [class.accessible]="butaca().tipo === 'accesible'"
+  [class.vip]="butaca().tipo === 'vip'"
+  [class.selected]="estado() === 'seleccionada'"
+  [class.reserved]="estado() === 'reservada'"
+  [class.occupied]="estado() === 'ocupada'"
+  [disabled]="bloqueada"
+  [attr.aria-label]="etiqueta"
+  [attr.aria-pressed]="estado() === 'seleccionada'"
+  [title]="etiqueta"
+  (click)="cambio.emit(butaca())"
+>
+  <span>{{ butaca().numero }}</span>
+</button>

@@ -1,0 +1,51 @@
+.admin-page { padding: 3rem 0 7rem; }
+.back-link, .eyebrow { color: var(--coral); }
+.admin-heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; padding: 4rem 0 2rem; }
+.admin-heading-actions { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: flex-end; }
+.admin-heading h1 { font: 600 clamp(3.5rem, 6vw, 6rem)/.95 var(--display); letter-spacing: -.06em; max-width: 730px; margin: 1rem 0; }
+.admin-heading h1 em { font-weight: 500; }
+.admin-heading p { max-width: 540px; color: #bbc5b6; }
+.admin-heading > a { flex-shrink: 0; margin-bottom: 1rem; }
+.admin-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 2rem; align-items: start; }
+.inventory-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-bottom: 1.3rem; border-bottom: 1px solid #677265; }
+.inventory-heading h2 { font: 600 2rem var(--display); margin: 0; }
+.inventory-heading .button-primary { padding: .6rem 1rem; font-size: .64rem; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 1rem .6rem; font-size: .62rem; letter-spacing: .12em; color: var(--coral); }
+td { border-top: 1px solid #4d594c; padding: 1.2rem .6rem; font-size: .78rem; }
+tr.editing { background: #243a29; }
+.product-name { display: block; font: 600 1.4rem/1.1 var(--display); overflow-wrap: anywhere; }
+.product-description { max-width: 320px; margin: .5rem 0 0; color: #aab6a4; font-size: .75rem; overflow-wrap: anywhere; }
+.price-cell { white-space: nowrap; }
+.status { display: inline-block; border: 1px solid #9c654f; color: #edb59f; border-radius: 100px; padding: .3rem .6rem; font-size: .62rem; }
+.status.published { border-color: #92ad84; color: #c1dfb6; }
+.row-actions { display: grid; justify-items: start; gap: .5rem; }
+.row-actions button { padding: .2rem 0; border: 0; background: transparent; color: var(--coral); font-size: .72rem; white-space: nowrap; text-decoration: underline; }
+.row-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.product-form { background: var(--paper); color: var(--ink); padding: 2rem; }
+.product-form .eyebrow { color: var(--coral-dark); font-size: .62rem; }
+.product-form h2 { font: 600 2.4rem/1 var(--display); letter-spacing: -.05em; margin: .6rem 0 2rem; }
+.product-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1.15rem; }
+.product-form fieldset:disabled { opacity: .6; }
+.product-form label > span { font-size: .65rem; text-transform: none; letter-spacing: 0; }
+.product-form textarea { min-height: 100px; }
+.publication-option { display: flex; gap: .7rem; align-items: start; font-weight: 700; }
+.publication-option input { accent-color: var(--coral-dark); margin-top: .25rem; }
+.publication-option > span { font-size: .8rem !important; }
+.publication-option small { display: block; color: #62705b; font-size: .67rem; font-weight: 400; margin-top: .3rem; }
+.form-actions { display: grid; gap: .7rem; margin-top: .5rem; }
+.cancel-edit { border: 0; background: transparent; color: #596453; text-decoration: underline; font-size: .75rem; }
+.admin-success { padding: .8rem 1rem; background: #243a29; color: #c1dfb6; }
+.list-message { padding: 2.5rem .6rem; color: #bbc5b6; }
+.category-cell { max-width: 130px; overflow-wrap: anywhere; color: #bdc6b9; }
+.category-editor { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #677265; }
+.category-editor h2 { font: 600 2rem var(--display); margin: .5rem 0; }
+.category-editor > p { font-size: .8rem; color: #bbc5b6; }
+.category-list { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 1.2rem 0; }
+.category-list li { padding: .4rem .8rem; border: 1px solid #596457; color: #d9dfd5; font-size: .72rem; overflow-wrap: anywhere; }
+.category-editor form { display: flex; align-items: start; gap: 1rem; }
+.category-editor .form-field { flex: 1; }
+.category-editor .button-primary { margin-top: 1.55rem; flex-shrink: 0; }
+.category-editor input { color: var(--cream); background: #202a21; border-color: #596457; }
+.category-editor .field-error { color: #edb59f; }
