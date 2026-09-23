@@ -1,0 +1,34 @@
+.coupons-admin { min-height: 80vh; padding: 3rem 0 7rem; }
+.back-link, .eyebrow, .section-index { color: var(--coral); }
+.admin-heading { display: grid; grid-template-columns: 1.35fr .65fr; gap: 5rem; align-items: end; padding: 4.5rem 0 3rem; border-bottom: 1px solid #596457; }
+.admin-heading h1 { max-width: 850px; margin: .8rem 0 0; font: 600 clamp(4rem, 7vw, 7rem)/.9 var(--display); letter-spacing: -.065em; }
+.admin-heading h1 em { color: var(--coral); font-weight: 500; }
+.admin-heading p, .first-purchase p { margin: 0; color: #bdc6b9; line-height: 1.75; }
+.first-purchase { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; margin-top: 2rem; padding: 2.5rem; border: 1px solid #596457; background: #202a21; }
+.first-purchase h2, .list-heading h2, .coupon-form h2 { margin: .4rem 0 .7rem; font: 600 2.8rem/1 var(--display); letter-spacing: -.045em; }
+.first-purchase form { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: end; }
+.first-purchase .button-primary { grid-column: 1 / -1; }
+.section-index { font-size: .62rem; font-weight: 800; letter-spacing: .14em; }
+.senior-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(350px, .75fr); gap: 1px; margin-top: 2rem; border: 1px solid #596457; background: #596457; align-items: start; }
+.coupon-list, .coupon-form { background: #172018; }
+.coupon-list { min-height: 600px; padding: 2rem; }
+.list-heading { display: flex; justify-content: space-between; align-items: end; gap: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid #596457; }
+.coupon-row { display: grid; grid-template-columns: 105px 1fr auto; align-items: center; gap: 1.5rem; padding: 1.5rem 0; border-bottom: 1px solid #465244; }
+.coupon-row.editing { background: #202b20; box-shadow: 0 0 0 1rem #202b20; }
+.coupon-row h3 { margin: .35rem 0; font: 600 1.65rem/1.1 var(--display); }
+.coupon-row small { color: #aeb8aa; }
+.coupon-row button, .cancel-edit { border: 0; background: transparent; color: var(--cream); text-decoration: underline; }
+.coupon-percentage { display: grid; padding: .8rem; border: 1px solid var(--coral); color: var(--coral); text-align: center; }
+.coupon-percentage strong { font: 600 2rem/1 var(--display); }
+.coupon-percentage span, .coupon-code { font-size: .55rem; font-weight: 800; letter-spacing: .12em; }
+.coupon-code { color: var(--coral); }
+.coupon-form { position: sticky; top: 1rem; display: grid; gap: 1rem; padding: 2.3rem; }
+.coupon-form .form-field input, .first-purchase .form-field input { border-color: #596457; background: #202a21; color: var(--cream); }
+.percentage-input { display: grid; grid-template-columns: 1fr 45px; }
+.percentage-input span { display: grid; place-items: center; border: 1px solid #596457; border-left: 0; font-weight: 800; }
+.publication-option { display: flex; gap: .8rem; align-items: start; padding: 1rem; border: 1px solid #596457; font-size: .78rem; }
+.publication-option input { width: 18px; height: 18px; accent-color: var(--coral); }
+.publication-option span { display: grid; font-weight: 700; }
+.publication-option small { color: #98a394; font-weight: 400; }
+.form-actions { display: flex; gap: .8rem; align-items: center; }
+.empty-state { padding: 4rem 0; color: #aeb8aa; }

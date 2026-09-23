@@ -18,6 +18,14 @@
 .adult-notice { background: #3c3420; color: #f2dca7; }
 .account-note { border: 1px solid #4f5d4c; color: #b9c4b5; }
 .credit-covered { background: #273f2b; color: #c8dec8; }
+.coupon-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.coupon-option { display: grid; grid-template-columns: auto 1fr; gap: .8rem; align-items: start; min-height: 105px; padding: 1rem; border: 1px solid #596457; background: #1c261d; cursor: pointer; }
+.coupon-option.selected { border-color: var(--coral); background: #2b2c22; }
+.coupon-option input { margin-top: .2rem; accent-color: var(--coral); }
+.coupon-option span { display: grid; gap: .2rem; }
+.coupon-option b { color: var(--coral); font: 600 2rem/1 var(--display); }
+.coupon-option strong { font-size: .84rem; }
+.coupon-option small { color: #9ba697; font-size: .65rem; line-height: 1.45; }
 .credit-option { display: grid; grid-template-columns: auto 1fr auto; gap: .9rem; align-items: center; border: 1px solid #596457; padding: 1rem; cursor: pointer; }
 .credit-option input { width: 18px; height: 18px; accent-color: var(--coral); }
 .credit-option span { display: flex; flex-direction: column; }
@@ -74,6 +82,7 @@
 .summary-combos > span { color: #873d29; }
 .summary-line, .summary-total { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 0; font-size: .74rem; }
 .summary-line { color: #4b674e; border-bottom: 1px solid #aaa596; }
+.discount-line { color: #9b3e28; }
 .summary-total { align-items: end; margin-top: auto; }
 .summary-total span { font-size: .65rem; font-weight: 700; letter-spacing: .1em; }
 .summary-total strong { font-family: var(--display); font-size: 2.2rem; font-weight: 600; }

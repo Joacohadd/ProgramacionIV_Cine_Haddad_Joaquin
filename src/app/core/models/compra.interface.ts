@@ -42,6 +42,11 @@ export interface Compra {
   entradas_total_centavos: number;
   productos_total_centavos: number;
   combos_total_centavos: number;
+  subtotal_centavos: number;
+  descuento_centavos: number;
+  cupon_id: string | null;
+  cupon_codigo: string | null;
+  cupon_porcentaje: number | null;
   total_centavos: number;
   credito_usado_centavos: number;
   pago_otro_centavos: number;
@@ -71,6 +76,11 @@ export interface ResultadoCompraRpc {
   entradas_total_centavos: number;
   productos_total_centavos: number;
   combos_total_centavos: number;
+  subtotal_centavos: number;
+  descuento_centavos: number;
+  cupon_id: string | null;
+  cupon_codigo: string | null;
+  cupon_porcentaje: number | null;
   total_centavos: number;
   credito_usado_centavos: number;
   pago_otro_centavos: number;

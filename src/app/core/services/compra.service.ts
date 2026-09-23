@@ -4,9 +4,11 @@ import { Pelicula } from '../models/pelicula.interface';
 import { FuncionDetalle } from '../models/programacion.interface';
 import { cumpleRestriccionEdad, fechaHoraFuncion, puedeCancelarCompra } from '../utils/compras';
 import { calcularEntradasFueraDeCombos } from '../utils/combo-compra';
+import { calcularDescuento } from '../utils/cupones';
 import { AuthService } from './auth.service';
 import { ButacasService } from './butacas.service';
 import { ComboCandyService } from './combo-candy.service';
+import { CuponService } from './cupon.service';
 import { PeliculaService } from './pelicula.service';
 import { ProductoService } from './producto.service';
 import { SupabaseService } from './supabase.service';
@@ -21,6 +23,7 @@ export class CompraService {
   private readonly peliculas = inject(PeliculaService);
   private readonly productos = inject(ProductoService);
   private readonly combosCandy = inject(ComboCandyService);
+  private readonly cupones = inject(CuponService);
   private readonly comprasSignal = signal<Compra[]>([]);
 
   readonly compras = computed(() => this.comprasSignal());
@@ -36,7 +39,8 @@ export class CompraService {
     fechaFuncion: string,
     entradas: EntradaCompra[],
     productos: ProductoCompra[] = [],
-    combos: ComboCompra[] = []
+    combos: ComboCompra[] = [],
+    cuponId: string | null = null
   ): Promise<Compra> {
     if (!entradas.length) throw new Error('La reserva no tiene butacas. Volvé al mapa y elegí tus lugares.');
     this.procesando.set(true);
@@ -45,8 +49,8 @@ export class CompraService {
 
     try {
       const compra = this.supabase.client
-        ? await this.confirmarSupabase(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos)
-        : await this.confirmarDemo(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos);
+        ? await this.confirmarSupabase(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId)
+        : await this.confirmarDemo(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId);
       this.mensaje.set(productos.length || combos.length
         ? 'Compra confirmada. Tus entradas y productos quedaron en la misma operación.'
         : 'Compra confirmada. Tu entrada ya está lista.');
@@ -186,6 +190,14 @@ export class CompraService {
     }
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
+    if (compra.cupon_codigo && compra.cupon_porcentaje) {
+      pdf.text(`CUPÓN ${compra.cupon_codigo} · ${compra.cupon_porcentaje}% DE DESCUENTO`, 28, totalEtiquetaY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`− ${dinero(compra.descuento_centavos)}`, 28, totalEtiquetaY + 8);
+      totalEtiquetaY += 19;
+      totalImporteY += 19;
+      pdf.setFont('helvetica', 'bold');
+    }
     pdf.text('TOTAL', 28, totalEtiquetaY);
     pdf.setFont('times', 'bold');
     pdf.setFontSize(23);
@@ -222,7 +234,8 @@ export class CompraService {
     fechaFuncion: string,
     entradas: EntradaCompra[],
     productos: ProductoCompra[],
-    combos: ComboCompra[]
+    combos: ComboCompra[],
+    cuponId: string | null
   ): Promise<Compra> {
     const client = this.supabase.client;
     if (!client) throw new Error('Supabase no está configurado.');
@@ -242,7 +255,8 @@ export class CompraService {
       p_combos: combos.map(combo => ({
         combo_id: combo.combo_id,
         cantidad: combo.cantidad
-      }))
+      })),
+      p_cupon_id: cuponId
     });
     if (error) throw new Error(error.message);
     const resultado = (Array.isArray(data) ? data[0] : data) as ResultadoCompraRpc | null;
@@ -262,7 +276,8 @@ export class CompraService {
     fechaFuncion: string,
     entradas: EntradaCompra[],
     productos: ProductoCompra[],
-    combos: ComboCompra[]
+    combos: ComboCompra[],
+    cuponId: string | null
   ): Promise<Compra> {
     const codigos = entradas.map(entrada => entrada.butaca_codigo).sort();
     const seleccionadas = [...this.butacas.seleccionadas()].sort();
@@ -338,7 +353,16 @@ export class CompraService {
     const entradasTotal = calcularEntradasFueraDeCombos(entradas, combosConfirmados);
     const productosTotal = productosIndividuales.reduce((suma, producto) => suma + producto.subtotal_centavos, 0);
     const combosTotal = combosConfirmados.reduce((suma, combo) => suma + combo.subtotal_centavos, 0);
-    const total = entradasTotal + productosTotal + combosTotal;
+    const subtotal = entradasTotal + productosTotal + combosTotal;
+    let cupon = undefined;
+    if (cuponId) {
+      if (!perfil) throw new Error('Iniciá sesión para usar un cupón.');
+      await this.cupones.cargarDisponibles();
+      cupon = this.cupones.obtenerDisponible(cuponId);
+      if (!cupon) throw new Error('El cupón ya no está disponible para esta compra.');
+    }
+    const descuento = cupon ? calcularDescuento(subtotal, cupon.porcentaje) : 0;
+    const total = subtotal - descuento;
     const creditoUsado = perfil && datos.usar_credito ? Math.min(perfil.credito_centavos, total) : 0;
     const pagoOtro = total - creditoUsado;
     const ahora = new Date().toISOString();
@@ -358,6 +382,11 @@ export class CompraService {
       entradas_total_centavos: entradasTotal,
       productos_total_centavos: productosTotal,
       combos_total_centavos: combosTotal,
+      subtotal_centavos: subtotal,
+      descuento_centavos: descuento,
+      cupon_id: cupon?.id ?? null,
+      cupon_codigo: cupon?.codigo ?? null,
+      cupon_porcentaje: cupon?.porcentaje ?? null,
       total_centavos: total,
       credito_usado_centavos: creditoUsado,
       pago_otro_centavos: pagoOtro,
@@ -422,6 +451,11 @@ export class CompraService {
       entradas_total_centavos: Number(resultado.entradas_total_centavos),
       productos_total_centavos: Number(resultado.productos_total_centavos),
       combos_total_centavos: Number(resultado.combos_total_centavos),
+      subtotal_centavos: Number(resultado.subtotal_centavos),
+      descuento_centavos: Number(resultado.descuento_centavos),
+      cupon_id: resultado.cupon_id,
+      cupon_codigo: resultado.cupon_codigo,
+      cupon_porcentaje: resultado.cupon_porcentaje == null ? null : Number(resultado.cupon_porcentaje),
       total_centavos: Number(resultado.total_centavos),
       credito_usado_centavos: Number(resultado.credito_usado_centavos),
       pago_otro_centavos: Number(resultado.pago_otro_centavos),
@@ -455,14 +489,23 @@ export class CompraService {
     const combosTotal = compra.combos_total_centavos == null
       ? combos.reduce((total, combo) => total + combo.subtotal_centavos, 0)
       : Number(compra.combos_total_centavos);
+    const descuento = Number(compra.descuento_centavos ?? 0);
+    const subtotal = compra.subtotal_centavos == null
+      ? Number(compra.total_centavos) + descuento
+      : Number(compra.subtotal_centavos);
     return {
       ...compra,
       hora_inicio: compra.hora_inicio.slice(0, 5),
       entradas_total_centavos: compra.entradas_total_centavos == null
-        ? Number(compra.total_centavos) - productosTotal - combosTotal
+        ? subtotal - productosTotal - combosTotal
         : Number(compra.entradas_total_centavos),
       productos_total_centavos: productosTotal,
       combos_total_centavos: combosTotal,
+      subtotal_centavos: subtotal,
+      descuento_centavos: descuento,
+      cupon_id: compra.cupon_id ?? null,
+      cupon_codigo: compra.cupon_codigo ?? null,
+      cupon_porcentaje: compra.cupon_porcentaje == null ? null : Number(compra.cupon_porcentaje),
       total_centavos: Number(compra.total_centavos),
       credito_usado_centavos: Number(compra.credito_usado_centavos),
       pago_otro_centavos: Number(compra.pago_otro_centavos),

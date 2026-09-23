@@ -1,0 +1,45 @@
+<section class="coupons-admin container">
+  <a class="back-link" routerLink="/admin/peliculas">← Volver a administración</a>
+  <header class="admin-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN / CUPONES</span><h1>Beneficios que abren <em>otra puerta.</em></h1></div>
+    <p>Configurá el descuento de primera compra y creá beneficios exclusivos para clientes mayores de 50 años.</p>
+  </header>
+
+  @if (error() || servicio.error()) { <p class="form-error" role="alert">{{ error() || servicio.error() }}</p> }
+  @if (mensaje()) { <p class="form-success" role="status">{{ mensaje() }}</p> }
+
+  <section class="first-purchase" aria-labelledby="first-purchase-title">
+    <div><span class="section-index">RF-040 / RF-041</span><h2 id="first-purchase-title">Primera compra</h2><p>Este beneficio se ofrece una única vez a cada usuario registrado que todavía no realizó compras.</p></div>
+    <form [formGroup]="primeraForm" (ngSubmit)="guardarPrimeraCompra()">
+      <div class="form-field"><label for="first-percentage">Porcentaje de descuento</label><div class="percentage-input"><input id="first-percentage" type="number" min="1" max="99" step="1" formControlName="porcentaje"><span>%</span></div>@if (primeraForm.controls.porcentaje.touched && primeraForm.controls.porcentaje.invalid) { <small class="field-error">Ingresá un número entero entre 1 y 99.</small> }</div>
+      <label class="publication-option"><input type="checkbox" formControlName="activo"><span>Beneficio activo<small>Si lo desactivás, no se ofrece en el checkout.</small></span></label>
+      <button class="button-primary" type="submit" [disabled]="enviando() || !primeraCompra()">{{ enviando() ? 'Guardando...' : 'Guardar configuración ↗' }}</button>
+    </form>
+  </section>
+
+  <div class="senior-layout">
+    <section class="coupon-list" aria-labelledby="senior-list-title">
+      <div class="list-heading"><div><span class="section-index">RF-042 / RN-07</span><h2 id="senior-list-title">Mayores de 50</h2></div><button class="button-outline" type="button" (click)="nuevo()">Nuevo cupón</button></div>
+      @if (servicio.cargando()) { <p class="empty-state">Cargando cupones...</p> }
+      @for (cupon of mayores(); track cupon.id) {
+        <article class="coupon-row" [class.editing]="editandoId() === cupon.id">
+          <div class="coupon-percentage"><strong>{{ cupon.porcentaje }}%</strong><span>DESCUENTO</span></div>
+          <div><span class="coupon-code">{{ cupon.codigo }}</span><h3>{{ cupon.nombre }}</h3><small>{{ cupon.activo ? 'Disponible para usuarios que ya cumplieron 51 años' : 'Cupón desactivado' }}</small></div>
+          <button type="button" (click)="editar(cupon)">Editar ↗</button>
+        </article>
+      } @empty {
+        @if (!servicio.cargando()) { <p class="empty-state">Todavía no hay cupones para mayores de 50.</p> }
+      }
+    </section>
+
+    <form class="coupon-form" [formGroup]="mayorForm" (ngSubmit)="guardarMayor()">
+      <span class="section-index">{{ editandoId() ? 'EDITAR CUPÓN' : 'NUEVO CUPÓN' }}</span>
+      <h2>{{ editandoId() ? 'Actualizar beneficio' : 'Crear beneficio' }}</h2>
+      <div class="form-field"><label for="coupon-code">Código</label><input id="coupon-code" formControlName="codigo" placeholder="MAYORES15">@if (mayorForm.controls.codigo.touched && mayorForm.controls.codigo.invalid) { <small class="field-error">Usá entre 4 y 24 letras, números o guiones.</small> }</div>
+      <div class="form-field"><label for="coupon-name">Nombre</label><input id="coupon-name" formControlName="nombre" placeholder="Experiencia 50+">@if (mayorForm.controls.nombre.touched && mayorForm.controls.nombre.invalid) { <small class="field-error">Ingresá entre 2 y 100 caracteres.</small> }</div>
+      <div class="form-field"><label for="coupon-percentage">Porcentaje</label><div class="percentage-input"><input id="coupon-percentage" type="number" min="1" max="99" step="1" formControlName="porcentaje"><span>%</span></div>@if (mayorForm.controls.porcentaje.touched && mayorForm.controls.porcentaje.invalid) { <small class="field-error">Ingresá un número entero entre 1 y 99.</small> }</div>
+      <label class="publication-option"><input type="checkbox" formControlName="activo"><span>Cupón activo<small>La edad se valida automáticamente al usarlo.</small></span></label>
+      <div class="form-actions"><button class="button-primary" type="submit" [disabled]="enviando()">{{ enviando() ? 'Guardando...' : editandoId() ? 'Guardar cambios ↗' : 'Crear cupón ↗' }}</button>@if (editandoId()) { <button type="button" class="cancel-edit" (click)="nuevo()">Cancelar</button> }</div>
+    </form>
+  </div>
+</section>

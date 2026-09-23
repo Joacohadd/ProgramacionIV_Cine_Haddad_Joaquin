@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ButacasService } from '../../core/services/butacas.service';
 import { CompraService } from '../../core/services/compra.service';
 import { ComboCandyService } from '../../core/services/combo-candy.service';
+import { CuponService } from '../../core/services/cupon.service';
 import { PeliculaService } from '../../core/services/pelicula.service';
 import { ProgramacionService } from '../../core/services/programacion.service';
 import { ProductoService } from '../../core/services/producto.service';
@@ -15,6 +16,7 @@ import { buscarButaca, generarMapaButacas } from '../../core/utils/butacas';
 import { armarProductosCompra, calcularTotalProductos, MAXIMO_PRODUCTOS_POR_ITEM } from '../../core/utils/candy-compra';
 import { cumpleRestriccionEdad, edadMinima } from '../../core/utils/compras';
 import { armarCombosCompra, calcularEntradasFueraDeCombos, calcularTotalCombos } from '../../core/utils/combo-compra';
+import { calcularDescuento } from '../../core/utils/cupones';
 
 @Component({
   selector: 'app-checkout',
@@ -31,6 +33,7 @@ export class Checkout {
   readonly programacion = inject(ProgramacionService);
   readonly candy = inject(ProductoService);
   readonly combos = inject(ComboCandyService);
+  readonly cupones = inject(CuponService);
   private readonly peliculas = inject(PeliculaService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -43,6 +46,7 @@ export class Checkout {
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     fecha_nacimiento: ['', Validators.required],
+    cupon_id: [''],
     usar_credito: [false],
     medio_pago: this.fb.nonNullable.control<DatosConfirmacionCompra['medio_pago']>('tarjeta_credito', Validators.required)
   });
@@ -51,6 +55,9 @@ export class Checkout {
   });
   private readonly usarCredito = toSignal(this.form.controls.usar_credito.valueChanges, {
     initialValue: this.form.controls.usar_credito.value
+  });
+  private readonly cuponElegidoId = toSignal(this.form.controls.cupon_id.valueChanges, {
+    initialValue: this.form.controls.cupon_id.value
   });
 
   readonly funcion = computed(() => this.programacion.funciones().find(item => item.id === this.id()));
@@ -85,7 +92,13 @@ export class Checkout {
   readonly subtotalEntradas = computed(() => calcularEntradasFueraDeCombos(this.entradas(), this.combosSeleccionados()));
   readonly subtotalCombos = computed(() => calcularTotalCombos(this.combosSeleccionados()));
   readonly subtotalCandy = computed(() => calcularTotalProductos(this.productosSeleccionados()));
-  readonly totalCentavos = computed(() => this.subtotalEntradas() + this.subtotalCombos() + this.subtotalCandy());
+  readonly subtotalCompra = computed(() => this.subtotalEntradas() + this.subtotalCombos() + this.subtotalCandy());
+  readonly cuponElegido = computed(() => this.cupones.disponibles().find(cupon => cupon.id === this.cuponElegidoId()));
+  readonly descuentoCentavos = computed(() => {
+    const cupon = this.cuponElegido();
+    return cupon ? calcularDescuento(this.subtotalCompra(), cupon.porcentaje) : 0;
+  });
+  readonly totalCentavos = computed(() => this.subtotalCompra() - this.descuentoCentavos());
   readonly creditoDisponible = computed(() => this.auth.currentUserData()?.credito_centavos ?? 0);
   readonly creditoAplicado = computed(() => this.usarCredito()
     ? Math.min(this.creditoDisponible(), this.totalCentavos())
@@ -109,8 +122,12 @@ export class Checkout {
     });
     effect(() => {
       const perfil = this.auth.currentUserData();
-      if (!perfil) return;
-      this.form.patchValue({ email: perfil.email, fecha_nacimiento: perfil.fecha_nacimiento }, { emitEvent: true });
+      if (perfil) {
+        this.form.patchValue({ email: perfil.email, fecha_nacimiento: perfil.fecha_nacimiento }, { emitEvent: true });
+      } else {
+        this.form.controls.cupon_id.setValue('');
+      }
+      void this.cupones.cargarDisponibles();
     });
     this.destroyRef.onDestroy(() => this.butacas.desconectar());
   }
@@ -132,7 +149,7 @@ export class Checkout {
         fecha_nacimiento: valores.fecha_nacimiento,
         usar_credito: valores.usar_credito,
         medio_pago: valores.medio_pago
-      }, funcion, pelicula, this.fecha(), this.entradas(), this.productosSeleccionados(), this.combosSeleccionados());
+      }, funcion, pelicula, this.fecha(), this.entradas(), this.productosSeleccionados(), this.combosSeleccionados(), this.cuponElegido()?.id ?? null);
       this.compraFinalizada.set(resultado);
       this.qrDataUrl.set(await this.compras.generarQrDataUrl(resultado));
       await this.descargar(resultado);

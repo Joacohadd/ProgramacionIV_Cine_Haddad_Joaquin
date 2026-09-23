@@ -19,5 +19,6 @@ export const routes: Routes = [
   { path: 'admin/programacion', canActivate: [adminGuard], loadComponent: () => import('./features/admin/programacion-admin/programacion-admin').then(c => c.ProgramacionAdmin) },
   { path: 'admin/productos', canActivate: [adminGuard], loadComponent: () => import('./features/admin/productos-admin/productos-admin').then(c => c.ProductosAdmin) },
   { path: 'admin/combos', canActivate: [adminGuard], loadComponent: () => import('./features/admin/combos-admin/combos-admin').then(c => c.CombosAdmin) },
+  { path: 'admin/cupones', canActivate: [adminGuard], loadComponent: () => import('./features/admin/cupones-admin/cupones-admin').then(c => c.CuponesAdmin) },
   { path: '**', redirectTo: '' }
 ];

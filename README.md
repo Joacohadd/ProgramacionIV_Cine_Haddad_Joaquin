@@ -66,6 +66,14 @@ Aplicación web de un cine desarrollada con Angular, TypeScript, HTML y CSS. La 
 
 El retiro del candy y el acceso a sala se registran por separado para que una acción no bloquee la otra. Una compra cuyo pedido ya fue entregado no puede cancelarse con reintegro.
 
+### 4.8 Cupones y descuentos
+
+- Cupón configurable para la primera compra de cada usuario registrado.
+- Administración del porcentaje y estado del beneficio sin modificar código.
+- Alta y edición de cupones exclusivos para usuarios mayores de 50 años.
+- Validación de edad y disponibilidad al confirmar la compra.
+- Descuento registrado en la compra, el historial y la entrada PDF.
+
 ## Ejecutar
 
 ```bash
@@ -75,7 +83,7 @@ npm start
 
 La aplicación queda disponible en `http://localhost:4200`.
 
-Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar las migraciones pendientes en orden hasta `supabase/migrations/20260922_combos_retiro_candy.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
+Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar las migraciones pendientes en orden hasta `supabase/migrations/20260923_cupones.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
 
 ## Verificar
 

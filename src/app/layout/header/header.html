@@ -10,6 +10,7 @@
       <a *appRole="'admin'" routerLink="/admin/programacion" routerLinkActive="active" (click)="menuOpen.set(false)">Funciones</a>
       <a *appRole="'admin'" routerLink="/admin/productos" routerLinkActive="active" (click)="menuOpen.set(false)">Productos</a>
       <a *appRole="'admin'" routerLink="/admin/combos" routerLinkActive="active" (click)="menuOpen.set(false)">Combos</a>
+      <a *appRole="'admin'" routerLink="/admin/cupones" routerLinkActive="active" (click)="menuOpen.set(false)">Cupones</a>
       <a *appRole="['empleado', 'admin']" routerLink="/personal/retiro-candy" routerLinkActive="active" (click)="menuOpen.set(false)">Retiro candy</a>
       @if (auth.currentUserData()) {
         <a routerLink="/perfil" routerLinkActive="active" (click)="menuOpen.set(false)">Mi perfil</a>

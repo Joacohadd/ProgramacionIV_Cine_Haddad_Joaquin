@@ -2,7 +2,7 @@
   @if (compraFinalizada(); as compra) {
     <div class="success-layout">
       <section class="success-copy">
-        <span class="eyebrow">4.7 / COMPRA CONFIRMADA</span>
+        <span class="eyebrow">4.8 / COMPRA CONFIRMADA</span>
         <h1>Tu entrada cruza <em>el umbral.</em></h1>
         <p>Guardá el PDF. El mismo código QR sirve para ingresar a la sala y retirar el pedido del candy.</p>
         <dl class="success-details">
@@ -17,6 +17,7 @@
           @if (compra.productos.length) {
             <div class="success-candy"><dt>Candy</dt><dd>@for (producto of compra.productos; track producto.producto_id) { <span>{{ producto.cantidad }}× {{ producto.nombre }}</span> }</dd></div>
           }
+          @if (compra.cupon_codigo) { <div><dt>Cupón aplicado</dt><dd>{{ compra.cupon_codigo }} · {{ compra.cupon_porcentaje }}% (− {{ precio(compra.descuento_centavos) }})</dd></div> }
           <div><dt>Total</dt><dd>{{ precio(compra.total_centavos) }}</dd></div>
         </dl>
         @if (compra.aviso_adulto) {
@@ -42,7 +43,7 @@
       <a class="back-link" [routerLink]="['/funcion', funcionActual.id, 'butacas']" [queryParams]="{ fecha: fecha() }">← Volver a las butacas</a>
       <header class="checkout-heading">
         <div>
-          <span class="eyebrow">4.7 / COMPRA CONJUNTA</span>
+          <span class="eyebrow">4.8 / COMPRA Y BENEFICIOS</span>
           <h1>Último paso antes de <em>la función.</em></h1>
         </div>
         <p>Revisá la reserva, completá los datos del comprador y elegí cómo abonar el saldo.</p>
@@ -148,6 +149,34 @@
             <section class="form-section">
               <div class="section-number">03</div>
               <div class="section-content">
+                <span class="eyebrow">CUPONES Y DESCUENTOS</span>
+                <h2>Elegí tu beneficio</h2>
+                @if (auth.currentUserData()) {
+                  <p class="section-note">Podés aplicar un cupón por compra. El descuento se calcula antes de usar tu crédito.</p>
+                  @if (cupones.error()) { <p class="form-error" role="alert">{{ cupones.error() }}</p> }
+                  <div class="coupon-options">
+                    <label class="coupon-option" [class.selected]="!cuponElegido()">
+                      <input type="radio" formControlName="cupon_id" value="">
+                      <span><strong>Continuar sin cupón</strong><small>No se aplicará un descuento.</small></span>
+                    </label>
+                    @for (cupon of cupones.disponibles(); track cupon.id) {
+                      <label class="coupon-option" [class.selected]="cuponElegido()?.id === cupon.id">
+                        <input type="radio" formControlName="cupon_id" [value]="cupon.id">
+                        <span><b>{{ cupon.porcentaje }}%</b><strong>{{ cupon.nombre }}</strong><small>{{ cupon.tipo === 'primera_compra' ? 'Beneficio único por tu primera compra' : 'Beneficio exclusivo para mayores de 50' }} · {{ cupon.codigo }}</small></span>
+                      </label>
+                    } @empty {
+                      <p class="account-note">No tenés cupones disponibles para esta compra.</p>
+                    }
+                  </div>
+                } @else {
+                  <p class="account-note">Los cupones están disponibles para usuarios registrados. Iniciá sesión antes de comprar para consultar tus beneficios.</p>
+                }
+              </div>
+            </section>
+
+            <section class="form-section">
+              <div class="section-number">04</div>
+              <div class="section-content">
                 <span class="eyebrow">FORMA DE PAGO</span>
                 <h2>Combiná tu saldo</h2>
                 @if (auth.currentUserData()) {
@@ -181,7 +210,7 @@
           </form>
 
           <aside class="order-summary">
-            <span class="summary-index">04</span>
+            <span class="summary-index">05</span>
             <span class="eyebrow">RESUMEN</span>
             <h2>{{ peliculaActual.titulo }}</h2>
             <p class="show-context">{{ fechaLarga(fecha()) }}<br>{{ funcionActual.hora_inicio }} · {{ funcionActual.sala_nombre }}<br>{{ funcionActual.formato }} · {{ funcionActual.idioma }}</p>
@@ -211,6 +240,7 @@
             <div class="summary-line"><span>{{ combosSeleccionados().length ? 'Entradas fuera de combo' : 'Entradas' }}</span><strong>{{ precio(subtotalEntradas()) }}</strong></div>
             @if (subtotalCombos()) { <div class="summary-line"><span>Combos</span><strong>{{ precio(subtotalCombos()) }}</strong></div> }
             @if (subtotalCandy()) { <div class="summary-line"><span>Candy bar</span><strong>{{ precio(subtotalCandy()) }}</strong></div> }
+            @if (descuentoCentavos()) { <div class="summary-line discount-line"><span>Cupón {{ cuponElegido()?.codigo }} ({{ cuponElegido()?.porcentaje }}%)</span><strong>− {{ precio(descuentoCentavos()) }}</strong></div> }
             @if (creditoAplicado()) { <div class="summary-line"><span>Crédito aplicado</span><strong>− {{ precio(creditoAplicado()) }}</strong></div> }
             <div class="summary-total"><span>TOTAL A PAGAR</span><strong>{{ precio(saldoAPagar()) }}</strong></div>
             @if (butacas.expiraEn()) {
