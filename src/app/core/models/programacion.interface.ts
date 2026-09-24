@@ -47,4 +47,7 @@ export interface FuncionDetalle extends Funcion {
   pelicula_imagen_url: string;
   duracion_minutos: number;
   sala_nombre: string;
+  fecha_estreno: string;
+  preventa_habilitada: boolean;
+  precio_preventa_centavos: number | null;
 }

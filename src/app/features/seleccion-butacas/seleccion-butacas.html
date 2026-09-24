@@ -16,7 +16,7 @@
 
     @if (fechas().length) {
       <nav class="date-picker" aria-label="Elegir fecha de la función">
-        <span>FECHA</span>
+        <span>{{ preventaActiva() ? 'PREVENTA · FECHA' : 'FECHA' }}</span>
         @for (fecha of fechas(); track fecha) {
           <button
             type="button"
@@ -81,8 +81,8 @@
           <p class="summary-context">{{ fechaLarga(fechaSeleccionada()) }} · {{ funcionActual.hora_inicio }}<br>{{ funcionActual.sala_nombre }}</p>
 
           <div class="price-key">
-            <span><i></i>General <strong>{{ precio(precioBase) }}</strong></span>
-            <span class="vip-price"><i></i>VIP <strong>{{ precio(precioBase + recargoVip) }}</strong></span>
+            <span><i></i>General <strong>{{ precio(precioBase()) }}</strong></span>
+            <span class="vip-price"><i></i>VIP <strong>{{ precio(precioBase() + recargoVip) }}</strong></span>
           </div>
 
           <div class="selected-list">

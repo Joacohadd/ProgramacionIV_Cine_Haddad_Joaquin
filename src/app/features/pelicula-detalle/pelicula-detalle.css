@@ -17,6 +17,14 @@
 .meta-grid span { font-size: .68rem; color: var(--coral); letter-spacing: .13em; font-weight: 700; }
 .meta-grid strong { font-size: .9rem; font-weight: 600; }
 .detail-note { color: #aab4a7; font-size: .79rem; margin-bottom: 1.7rem; }
+.release-box { border: 1px solid #667163; padding: 1rem 1.1rem; margin-bottom: 1.4rem; display: grid; gap: .45rem; }
+.release-box > span { color: var(--coral); font-size: .66rem; font-weight: 800; letter-spacing: .13em; }
+.release-box > strong { font-family: var(--display); color: var(--cream); font-size: 1.5rem; }
+.release-box p, .release-box small { color: #aab4a7; margin: 0; font-size: .75rem; }
+.release-box button, .release-box a { justify-self: start; border: 1px solid var(--cream); background: transparent; color: var(--cream); padding: .65rem .8rem; margin-top: .4rem; font-size: .66rem; font-weight: 800; text-transform: uppercase; text-decoration: none; cursor: pointer; }
+.release-box button:hover, .release-box a:hover { background: var(--cream); color: var(--ink); }
+.release-box button:disabled { opacity: .55; cursor: wait; }
+.release-box small.error { color: #ff9477; }
 .showtimes-section { border-top: 1px solid #556253; margin-top: clamp(4rem, 9vw, 8rem); padding-top: clamp(3rem, 6vw, 5rem); }
 .showtimes-heading { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 4rem; align-items: end; margin-bottom: 2rem; }
 .showtimes-heading .eyebrow { color: var(--coral); }

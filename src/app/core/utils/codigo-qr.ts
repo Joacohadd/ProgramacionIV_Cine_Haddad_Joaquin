@@ -9,3 +9,8 @@ export function parsearCodigoQr(contenido: string): CodigoQrCompra | null {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(token)) return null;
   return { codigo, token };
 }
+
+export function parsearCodigoManual(contenido: string): string | null {
+  const codigo = contenido.trim().toLocaleUpperCase();
+  return /^UMB-[A-Z0-9]{10}$/.test(codigo) ? codigo : null;
+}

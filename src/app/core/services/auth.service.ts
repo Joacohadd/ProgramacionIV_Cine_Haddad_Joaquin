@@ -60,6 +60,15 @@ export class AuthService {
     if (perfil.id !== 'demo-admin') localStorage.setItem(DEMO_PERFIL_KEY, JSON.stringify(actualizado));
   }
 
+  actualizarPuntosDemo(puntos: number): void {
+    if (!this.demo) return;
+    const perfil = this.currentUserData();
+    if (!perfil) return;
+    const actualizado = { ...perfil, puntos: Math.max(0, Math.trunc(puntos)) };
+    this.currentUserData.set(actualizado);
+    if (perfil.id !== 'demo-admin') localStorage.setItem(DEMO_PERFIL_KEY, JSON.stringify(actualizado));
+  }
+
   private async cargarPerfil(id: string): Promise<void> {
     const client = this.supabase.client;
     if (!client) return;
@@ -124,6 +133,15 @@ export class AuthService {
       id: 'demo-admin', email: 'admin@umbral.demo', nombre: 'Equipo', apellido: 'Umbral',
       fecha_nacimiento: '1980-01-01', tipo_sangre: 'O+', color_ojos: 'Marrón',
       dias_vacaciones: 0, rol: 'admin', puntos: 0, credito_centavos: 0
+    });
+  }
+
+  ingresarEmpleadoDemo(): void {
+    if (!this.demo) return;
+    this.currentUserData.set({
+      id: 'demo-empleado', email: 'empleado@umbral.demo', nombre: 'Personal', apellido: 'Umbral',
+      fecha_nacimiento: '1990-01-01', tipo_sangre: 'O+', color_ojos: 'Marrón',
+      dias_vacaciones: 0, rol: 'empleado', puntos: 0, credito_centavos: 0
     });
   }
 

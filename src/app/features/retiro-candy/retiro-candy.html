@@ -1,39 +1,105 @@
 <section class="pickup-page container">
   <a class="back-link" routerLink="/">← Volver a cartelera</a>
-  <header class="pickup-heading"><div><span class="eyebrow">PERSONAL / RETIRO DE CANDY</span><h1>Un mismo código, <em>todo el pedido.</em></h1></div><p>Leé el QR de la entrada y verificá los productos antes de entregarlos. El retiro del candy se registra por separado del ingreso a la sala.</p></header>
+  <header class="pickup-heading">
+    <div><span class="eyebrow">PERSONAL / VALIDACIÓN</span><h1>Una lectura, <em>dos controles.</em></h1></div>
+    <p>Identificá la compra por QR o por su código impreso. El ingreso a sala y la entrega de candy se registran por separado.</p>
+  </header>
 
   <div class="pickup-layout">
-    <form class="reader-panel" [formGroup]="form" (ngSubmit)="consultar()" novalidate>
-      <span class="panel-number">01</span><span class="eyebrow">LECTURA</span><h2>Contenido del QR</h2>
-      <p>Ingresá el texto leído por el escáner con el formato <strong>UMBRAL|CÓDIGO|TOKEN</strong>.</p>
-      <div class="form-field"><label for="qr-content">Código completo</label><textarea id="qr-content" formControlName="contenido" rows="4" spellcheck="false" placeholder="UMBRAL|UMB-XXXXXXXXXX|xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></textarea>@if (form.controls.contenido.touched && form.controls.contenido.invalid) { <small class="field-error">Ingresá el contenido completo de un QR de Umbral.</small> }</div>
-      <button class="button-primary" type="submit" [disabled]="servicio.procesando()">{{ servicio.procesando() ? 'Consultando...' : 'Identificar compra →' }}</button>
-    </form>
+    <section class="reader-panel" aria-labelledby="reader-title">
+      <span class="panel-number">01</span>
+      <span class="eyebrow">IDENTIFICACIÓN</span>
+      <h2 id="reader-title">Leer entrada</h2>
+      <div class="reader-modes" role="group" aria-label="Modo de lectura">
+        <button type="button" [class.active]="modo() === 'qr'" [attr.aria-pressed]="modo() === 'qr'" [disabled]="servicio.procesando()" (click)="cambiarModo('qr')">Escanear QR</button>
+        <button type="button" [class.active]="modo() === 'manual'" [attr.aria-pressed]="modo() === 'manual'" [disabled]="servicio.procesando()" (click)="cambiarModo('manual')">Código manual</button>
+      </div>
 
-    <section class="order-panel" aria-live="polite">
-      <span class="panel-number">02</span><span class="eyebrow">PEDIDO</span>
+      @if (modo() === 'qr') {
+        <p>Apuntá la cámara al QR de la entrada. También podés pegar el contenido leído por otro escáner.</p>
+        <div class="camera-frame" [hidden]="!escaneando()">
+          <video #video autoplay muted playsinline aria-label="Vista de la cámara para leer el QR"></video>
+          <span>Ubicá el QR dentro del recuadro</span>
+        </div>
+        <button class="camera-action" type="button" [disabled]="servicio.procesando()" (click)="escaneando() ? detenerCamara() : iniciarCamara()">
+          {{ escaneando() ? 'Detener cámara' : 'Abrir cámara para escanear' }}
+        </button>
+        @if (errorCamara()) { <p class="form-error" role="alert">{{ errorCamara() }}</p> }
+      } @else {
+        <p>Ingresá el código <strong>UMB-XXXXXXXXXX</strong> impreso en la entrada cuando el lector no funcione.</p>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="consultar()" novalidate>
+        <div class="form-field">
+          <label for="reader-content">{{ modo() === 'qr' ? 'Contenido del QR' : 'Código de compra' }}</label>
+          <input id="reader-content" formControlName="contenido" spellcheck="false" autocomplete="off"
+            [attr.aria-disabled]="servicio.procesando()" [readonly]="servicio.procesando()" (input)="servicio.limpiar()"
+            [placeholder]="modo() === 'qr' ? 'UMBRAL|UMB-XXXXXXXXXX|TOKEN' : 'UMB-XXXXXXXXXX'">
+          @if (form.controls.contenido.touched && form.controls.contenido.invalid) {
+            <small class="field-error">Ingresá el código para identificar la compra.</small>
+          }
+        </div>
+        <button class="button-primary" type="submit" [disabled]="servicio.procesando()">
+          {{ servicio.procesando() ? 'Consultando...' : 'Identificar compra →' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="order-panel" aria-live="polite" aria-labelledby="order-title">
+      <span class="panel-number">02</span>
+      <span class="eyebrow">ESTADO DE LA COMPRA</span>
+      <h2 id="order-title">Validar operación</h2>
       @if (servicio.error()) { <p class="form-error" role="alert">{{ servicio.error() }}</p> }
       @if (servicio.mensaje()) { <p class="pickup-success" role="status">{{ servicio.mensaje() }}</p> }
       @if (servicio.resultado(); as compra) {
-        <div class="order-head"><div><small>{{ compra.compra_codigo }}</small><h2>{{ compra.pelicula_titulo }}</h2><p>{{ fecha(compra.fecha_funcion) }} · {{ compra.hora_inicio }} · {{ compra.sala_nombre }}</p></div><span class="purchase-status" [class.valid]="compra.valida">{{ compra.valida ? 'VIGENTE' : compra.estado.toLocaleUpperCase() }}</span></div>
-        @if (compra.productos.length) {
-          <div class="products-to-pickup">
-            @for (producto of compra.productos; track producto.producto_id) {
-              <div><strong>{{ producto.cantidad }}</strong><span>{{ producto.nombre }}</span></div>
+        <div class="order-head">
+          <div>
+            <small>{{ compra.compra_codigo }}</small>
+            <h3>{{ compra.pelicula_titulo }}</h3>
+            <p>{{ fecha(compra.fecha_funcion) }} · {{ compra.hora_inicio }} · {{ compra.sala_nombre }}</p>
+            <p>Butacas: {{ compra.butacas.join(' · ') }}</p>
+          </div>
+          <span class="purchase-status" [class.valid]="compra.valida">{{ compra.valida ? 'VIGENTE' : compra.estado.toLocaleUpperCase() }}</span>
+        </div>
+
+        <div class="validation-grid">
+          <div class="validation-box">
+            <span>01 / ACCESO A SALA</span>
+            @if (compra.ingreso_validado_en) {
+              <strong>Ingreso ya utilizado</strong>
+              <p>Validado el {{ fechaHora(compra.ingreso_validado_en) }}.</p>
+            } @else if (!compra.valida) {
+              <strong>Ingreso no disponible</strong>
+              <p>La compra no está vigente.</p>
+            } @else {
+              <strong>Entrada disponible</strong>
+              <p>Confirmá solamente al permitir el acceso a la sala.</p>
+              <button type="button" [disabled]="servicio.procesando()" (click)="servicio.confirmar('ingreso')">Validar ingreso ✓</button>
             }
           </div>
-          @if (compra.candy_retirado_en) {
-            <p class="already-picked"><strong>Pedido ya entregado.</strong><br>Registrado el {{ horaRetiro(compra.candy_retirado_en) }}.</p>
-          } @else if (!compra.valida) {
-            <p class="already-picked">La compra no está vigente y el pedido no puede entregarse.</p>
-          } @else {
-            <button class="button-primary deliver-action" type="button" (click)="servicio.confirmarRetiro()" [disabled]="servicio.procesando()">{{ servicio.procesando() ? 'Registrando...' : 'Confirmar entrega de candy ✓' }}</button>
-          }
-        } @else {
-          <p class="empty-order">Esta compra no contiene productos del candy bar.</p>
-        }
+          <div class="validation-box">
+            <span>02 / ENTREGA DE CANDY</span>
+            @if (compra.productos.length) {
+              <div class="products-to-pickup">
+                @for (producto of compra.productos; track producto.producto_id) {
+                  <div><strong>{{ producto.cantidad }}</strong><span>{{ producto.nombre }}</span></div>
+                }
+              </div>
+              @if (compra.candy_retirado_en) {
+                <strong>Pedido ya entregado</strong>
+                <p>Registrado el {{ fechaHora(compra.candy_retirado_en) }}.</p>
+              } @else if (!compra.valida) {
+                <strong>Entrega no disponible</strong>
+              } @else {
+                <button type="button" [disabled]="servicio.procesando()" (click)="servicio.confirmar('candy')">Confirmar entrega ✓</button>
+              }
+            } @else {
+              <p>Esta compra no tiene productos del candy bar.</p>
+            }
+          </div>
+        </div>
       } @else if (!servicio.error()) {
-        <div class="waiting-order"><span aria-hidden="true">✦</span><p>El detalle de la compra aparecerá después de leer el QR.</p></div>
+        <div class="waiting-order"><span aria-hidden="true">✦</span><p>El detalle aparecerá cuando leas un QR o ingreses el código.</p></div>
       }
     </section>
   </div>

@@ -12,11 +12,12 @@ import { CuponService } from '../../core/services/cupon.service';
 import { PeliculaService } from '../../core/services/pelicula.service';
 import { ProgramacionService } from '../../core/services/programacion.service';
 import { ProductoService } from '../../core/services/producto.service';
-import { buscarButaca, generarMapaButacas } from '../../core/utils/butacas';
+import { buscarButaca, generarMapaButacas, PRECIO_BUTACA_CENTAVOS } from '../../core/utils/butacas';
 import { armarProductosCompra, calcularTotalProductos, MAXIMO_PRODUCTOS_POR_ITEM } from '../../core/utils/candy-compra';
 import { cumpleRestriccionEdad, edadMinima } from '../../core/utils/compras';
 import { armarCombosCompra, calcularEntradasFueraDeCombos, calcularTotalCombos } from '../../core/utils/combo-compra';
 import { calcularDescuento } from '../../core/utils/cupones';
+import { precioBaseVigente, ventaHabilitada } from '../../core/utils/estrenos';
 
 @Component({
   selector: 'app-checkout',
@@ -37,6 +38,7 @@ export class Checkout {
   private readonly peliculas = inject(PeliculaService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly hoy = this.fechaISO(new Date());
 
   readonly compraFinalizada = signal<Compra | null>(null);
   readonly qrDataUrl = signal<string | null>(null);
@@ -76,7 +78,15 @@ export class Checkout {
     const dia = new Date(`${fecha}T00:00:00Z`).getUTCDay() || 7;
     return funcion.dias_semana.includes(dia as typeof funcion.dias_semana[number]);
   });
-  readonly mapa = computed(() => this.sala() ? generarMapaButacas(this.sala()!) : []);
+  readonly ventaHabilitada = computed(() => {
+    const funcion = this.funcion();
+    return funcion ? ventaHabilitada(funcion, this.hoy) : false;
+  });
+  readonly precioBase = computed(() => {
+    const funcion = this.funcion();
+    return funcion ? precioBaseVigente(funcion, this.hoy, PRECIO_BUTACA_CENTAVOS) : PRECIO_BUTACA_CENTAVOS;
+  });
+  readonly mapa = computed(() => this.sala() ? generarMapaButacas(this.sala()!, this.precioBase()) : []);
   readonly entradas = computed<EntradaCompra[]>(() => this.butacas.seleccionadas()
     .map(codigo => buscarButaca(this.mapa(), codigo))
     .filter((butaca): butaca is ButacaMapa => Boolean(butaca))
@@ -118,7 +128,9 @@ export class Checkout {
     effect(() => {
       const funcion = this.funcion();
       const fecha = this.fecha();
-      if (funcion && this.fechaProgramada()) void this.butacas.conectar(funcion.id, fecha);
+      if (funcion && this.fechaProgramada() && this.ventaHabilitada()) {
+        void this.butacas.conectar(funcion.id, fecha, this.precioBase());
+      }
     });
     effect(() => {
       const perfil = this.auth.currentUserData();
@@ -136,7 +148,7 @@ export class Checkout {
     this.form.markAllAsTouched();
     const funcion = this.funcion();
     const pelicula = this.pelicula();
-    if (this.form.invalid || !funcion || !pelicula || !this.fechaProgramada() || !this.entradas().length) return;
+    if (this.form.invalid || !funcion || !pelicula || !this.fechaProgramada() || !this.ventaHabilitada() || !this.entradas().length) return;
     if (!this.edadPermitida()) {
       this.compras.error.set(`Necesitás tener al menos ${this.edadRequerida()} años en la fecha de la función.`);
       return;
@@ -221,5 +233,12 @@ export class Checkout {
   horaExpiracion(): string {
     const fecha = this.butacas.expiraEn();
     return fecha ? new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(fecha)) : '';
+  }
+
+  private fechaISO(fecha: Date): string {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
   }
 }

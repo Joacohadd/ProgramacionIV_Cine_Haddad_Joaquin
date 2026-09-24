@@ -18,5 +18,7 @@
 .genre-options input:focus-visible + span { outline: 3px solid var(--coral); outline-offset: 2px; }
 .visibility { min-height: 48px; display: flex; gap: .6rem; align-items: center; font-size: .79rem; font-weight: 700; }
 .visibility input { accent-color: var(--coral-dark); width: 18px; height: 18px; }
+.presale-box { border: 1px solid #c4c8bd; padding: 1rem 1.15rem; display: grid; gap: 1rem; }
+.presale-box .form-field small { color: #697265; font-size: .72rem; }
 @media(max-width: 950px) { .form-layout { grid-template-columns: 1fr; margin-top: 3rem; } .intro-symbol { display: none; } }
 @media(max-width: 560px) { .two-cols { grid-template-columns: 1fr; } }

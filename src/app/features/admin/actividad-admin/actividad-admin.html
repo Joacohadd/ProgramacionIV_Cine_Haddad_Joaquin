@@ -1,0 +1,62 @@
+<section class="activity-page container">
+  <a class="back-link" routerLink="/admin/peliculas">← Volver a administración</a>
+  <header class="activity-heading">
+    <div><span class="eyebrow">4.11 / ADMINISTRACIÓN Y AUDITORÍA</span><h1>Cada acción deja <em>registro.</em></h1></div>
+    <p>Habilitá al personal registrado y consultá quién creó funciones, cambió precios o validó entradas y pedidos.</p>
+  </header>
+
+  @if (servicio.error()) { <p class="form-error" role="alert">{{ servicio.error() }}</p> }
+  @if (servicio.mensaje()) { <p class="activity-success" role="status">{{ servicio.mensaje() }}</p> }
+
+  <section class="staff-panel" aria-labelledby="staff-title">
+    <div class="section-heading">
+      <div><span>01 / ACCESOS</span><h2 id="staff-title">Cuentas del personal</h2></div>
+      <p>La persona se registra primero como cliente. Desde acá podés darle o quitarle acceso a la validación.</p>
+    </div>
+    <div class="staff-search">
+      <label for="staff-filter">Buscar cuenta</label>
+      <input id="staff-filter" type="search" [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" placeholder="Nombre o correo">
+    </div>
+    @if (servicio.cargando()) {
+      <p class="empty-state">Cargando cuentas...</p>
+    } @else {
+      <div class="staff-list">
+        @for (cuenta of cuentasFiltradas(); track cuenta.id) {
+          <article class="staff-row">
+            <div><strong>{{ cuenta.nombre }} {{ cuenta.apellido }}</strong><span>{{ cuenta.email }}</span></div>
+            <small [class.employee]="cuenta.rol === 'empleado'">{{ cuenta.rol.toLocaleUpperCase() }}</small>
+            @if (cuenta.rol !== 'admin') {
+              <button type="button" [disabled]="servicio.guardando()" (click)="servicio.cambiarRol(cuenta)">
+                {{ cuenta.rol === 'empleado' ? 'Quitar acceso' : 'Habilitar empleado' }}
+              </button>
+            } @else { <span class="admin-tag">Acceso completo</span> }
+          </article>
+        } @empty { <p class="empty-state">No encontramos cuentas con esa búsqueda.</p> }
+      </div>
+    }
+  </section>
+
+  <section class="audit-panel" aria-labelledby="audit-title">
+    <div class="section-heading">
+      <div><span>02 / TRAZABILIDAD</span><h2 id="audit-title">Actividad reciente</h2></div>
+      <button type="button" (click)="servicio.cargar()" [disabled]="servicio.cargando()">Actualizar ↻</button>
+    </div>
+    <div class="audit-table-wrap">
+      <table>
+        <thead><tr><th scope="col">FECHA Y HORA</th><th scope="col">USUARIO</th><th scope="col">ACCIÓN</th><th scope="col">REFERENCIA</th></tr></thead>
+        <tbody>
+          @for (registro of servicio.actividad(); track registro.id) {
+            <tr>
+              <td>{{ fechaHora(registro.creado_en) }}</td>
+              <td>{{ registro.usuario_email }}</td>
+              <td><strong>{{ accion(registro) }}</strong></td>
+              <td>{{ detalle(registro) }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4">Todavía no hay actividad registrada desde la aplicación de esta migración.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

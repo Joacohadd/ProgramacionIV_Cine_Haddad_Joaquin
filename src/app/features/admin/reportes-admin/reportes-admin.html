@@ -1,0 +1,98 @@
+<section class="reports-page container">
+  <a class="back-link" routerLink="/">← Volver a cartelera</a>
+  <header class="reports-heading">
+    <div>
+      <span class="eyebrow">4.12 / REPORTES</span>
+      <h1>Los números <em>de la función.</em></h1>
+    </div>
+    <p>Ventas, entradas y preferencias del público en un solo lugar.</p>
+  </header>
+
+  <section class="report-controls" aria-label="Filtros del reporte">
+    <div class="date-control">
+      <label for="report-day">FECHA DE VENTA</label>
+      <input id="report-day" type="date" [value]="dia()" (change)="cambiarDia($any($event.target).value)">
+    </div>
+    <div class="period-control">
+      <span>PELÍCULAS MÁS VISTAS</span>
+      <div class="period-buttons" role="group" aria-label="Período del gráfico">
+        <button type="button" [class.selected]="periodo() === 'semana'" [attr.aria-pressed]="periodo() === 'semana'" (click)="cambiarPeriodo('semana')">Semana</button>
+        <button type="button" [class.selected]="periodo() === 'mes'" [attr.aria-pressed]="periodo() === 'mes'" (click)="cambiarPeriodo('mes')">Mes</button>
+      </div>
+    </div>
+    <button class="refresh-button" type="button" [disabled]="servicio.cargando()" (click)="cargar()">Actualizar ↗</button>
+  </section>
+
+  @if (servicio.error()) { <p class="report-error" role="alert">{{ servicio.error() }}</p> }
+  @if (errorDescarga()) { <p class="report-error" role="alert">{{ errorDescarga() }}</p> }
+  @if (servicio.cargando()) { <p class="report-loading" role="status">Preparando el reporte...</p> }
+
+  @if (servicio.reporte(); as reporte) {
+    <div class="report-summary">
+      <article class="metric metric-main">
+        <span>01 / FACTURACIÓN · {{ fecha(reporte.dia) }}</span>
+        <strong>{{ dinero(reporte.facturacion_centavos) }}</strong>
+        <p>Importe final de las compras vigentes realizadas ese día.</p>
+      </article>
+      <article class="metric">
+        <span>02 / ENTRADAS VENDIDAS</span>
+        <strong>{{ reporte.entradas_vendidas }}</strong>
+        <p>En {{ reporte.compras }} {{ reporte.compras === 1 ? 'compra' : 'compras' }} del día.</p>
+      </article>
+      <article class="metric metric-candy">
+        <span>03 / CANDY MÁS VENDIDO · HISTÓRICO</span>
+        @if (reporte.producto_mas_vendido; as producto) {
+          <strong>{{ producto.nombre }}</strong>
+          <p>{{ producto.cantidad }} unidades vendidas, incluidas las de combos.</p>
+        } @else {
+          <strong>Sin ventas</strong>
+          <p>Todavía no hay productos vendidos.</p>
+        }
+      </article>
+    </div>
+
+    <section class="movie-report" aria-labelledby="movies-report-title">
+      <div class="report-section-heading">
+        <div><span>04 / PELÍCULAS MÁS VISTAS</span><h2 id="movies-report-title">La cartelera en cifras</h2></div>
+        <p>{{ periodoTexto(reporte) }}<br>Entradas de funciones en este período.</p>
+      </div>
+      @if (reporte.peliculas.length) {
+        <ol class="movie-chart">
+          @for (pelicula of reporte.peliculas; track pelicula.pelicula_id; let indice = $index) {
+            <li>
+              <span class="movie-rank">{{ (indice + 1).toString().padStart(2, '0') }}</span>
+              <div class="movie-chart-body">
+                <div class="movie-chart-label"><strong>{{ pelicula.titulo }}</strong><span>{{ pelicula.entradas }} {{ pelicula.entradas === 1 ? 'entrada' : 'entradas' }}</span></div>
+                <div class="chart-track" aria-hidden="true"><span [style.width.%]="anchoBarra(pelicula.entradas)"></span></div>
+              </div>
+            </li>
+          }
+        </ol>
+      } @else {
+        <p class="empty-report">No hay entradas vendidas para funciones de este período.</p>
+      }
+    </section>
+
+    <section class="sales-report" aria-labelledby="sales-report-title">
+      <div class="report-section-heading">
+        <div><span>05 / DETALLE DIARIO</span><h2 id="sales-report-title">Facturación del día</h2></div>
+        <div class="export-actions">
+          <button type="button" [disabled]="descargando()" (click)="descargar('pdf')">{{ descargando() === 'pdf' ? 'Generando...' : 'Descargar PDF ↓' }}</button>
+          <button type="button" [disabled]="descargando()" (click)="descargar('excel')">{{ descargando() === 'excel' ? 'Generando...' : 'Descargar Excel ↓' }}</button>
+        </div>
+      </div>
+      <div class="sales-table-wrap">
+        <table>
+          <thead><tr><th scope="col">HORA</th><th scope="col">CÓDIGO</th><th scope="col">PELÍCULA</th><th scope="col">ENTRADAS</th><th scope="col">TOTAL</th></tr></thead>
+          <tbody>
+            @for (venta of reporte.ventas; track venta.codigo) {
+              <tr><td>{{ hora(venta.creada_en) }}</td><td>{{ venta.codigo }}</td><td>{{ venta.pelicula }}</td><td>{{ venta.entradas }}</td><td>{{ dinero(venta.total_centavos) }}</td></tr>
+            } @empty {
+              <tr><td colspan="5">No hubo compras vigentes en la fecha elegida.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

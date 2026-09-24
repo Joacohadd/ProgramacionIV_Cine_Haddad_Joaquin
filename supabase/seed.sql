@@ -9,6 +9,18 @@ insert into public.peliculas (id, titulo, sinopsis, duracion_minutos, imagen_url
 ('10000000-0000-4000-8000-000000000006','Otra forma de volver','Un padre y una hija atraviesan la ruta más larga del país y descubren que ninguna despedida fue definitiva.',89,'/posters/volver.svg',array['Drama','Aventura'],'ATP',true,'2026-09-12')
 on conflict (id) do nothing;
 
+-- Estrenos futuros de muestra para probar alertas y preventa del punto 4.10.
+insert into public.peliculas (
+  id, titulo, sinopsis, duracion_minutos, imagen_url, generos, clasificacion,
+  visible_inicio, fecha_estreno, preventa_habilitada, precio_preventa_centavos
+) values
+('10000000-0000-4000-8000-000000000007','Después del eclipse','Dos hermanas siguen las huellas de una ciudad que solo aparece durante el último eclipse del año.',105,'/posters/ultima-luz.svg',array['Misterio','Aventura'],'13',true,'2026-09-28',true,600000),
+('10000000-0000-4000-8000-000000000008','La casa de las mareas','Una arquitecta descubre que la casa familiar cambia de forma cada vez que sube el nivel del mar.',111,'/posters/mareas.svg',array['Drama','Fantasía'],'ATP',true,'2026-10-15',true,650000)
+on conflict (id) do update set
+  fecha_estreno = excluded.fecha_estreno,
+  preventa_habilitada = excluded.preventa_habilitada,
+  precio_preventa_centavos = excluded.precio_preventa_centavos;
+
 -- El modo conectado empieza con 0 ventas. Solo entradas realmente pagadas
 -- (insertadas por un checkout posterior) afectan el orden del top 3.
 -- Las reseñas se publican desde la aplicación con una cuenta autenticada, para
@@ -26,7 +38,9 @@ insert into public.funciones (id, pelicula_id, sala_id, fecha_desde, fecha_hasta
 ('30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','2026-09-01','2026-10-31',array[1,3,5]::smallint[],'18:00','2D','Castellano',true),
 ('30000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000002','2026-09-01','2026-10-31',array[1,3,5]::smallint[],'18:00','3D','Subtitulada',true),
 ('30000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001','2026-09-01','2026-10-31',array[2,4,6]::smallint[],'20:30','2D','Castellano',true),
-('30000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000003','2026-09-01','2026-10-31',array[6,7]::smallint[],'16:00','5D','Castellano',true)
+('30000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000003','2026-09-01','2026-10-31',array[6,7]::smallint[],'16:00','5D','Castellano',true),
+('30000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000007','20000000-0000-4000-8000-000000000001','2026-09-28','2026-11-15',array[2,4,6]::smallint[],'14:00','2D','Castellano',true),
+('30000000-0000-4000-8000-000000000006','10000000-0000-4000-8000-000000000008','20000000-0000-4000-8000-000000000002','2026-10-15','2026-11-30',array[1,3,5]::smallint[],'15:00','2D','Subtitulada',true)
 on conflict (id) do nothing;
 
 -- Ocupaciones de muestra para visualizar la disponibilidad del punto 4.5.

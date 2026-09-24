@@ -11,6 +11,8 @@ export interface Pelicula {
   clasificacion: Clasificacion;
   visible_inicio: boolean;
   fecha_estreno: string;
+  preventa_habilitada: boolean;
+  precio_preventa_centavos: number | null;
   entradas_vendidas: number;
   promedio_calificacion: number;
   cantidad_resenas: number;

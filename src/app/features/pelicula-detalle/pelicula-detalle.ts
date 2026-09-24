@@ -5,8 +5,10 @@ import { AuthService } from '../../core/services/auth.service';
 import { PeliculaService } from '../../core/services/pelicula.service';
 import { ProgramacionService } from '../../core/services/programacion.service';
 import { ResenaService } from '../../core/services/resena.service';
+import { EstrenosService } from '../../core/services/estrenos.service';
 import { DIAS_SEMANA, FuncionDetalle } from '../../core/models/programacion.interface';
 import { horaFin } from '../../core/utils/planificacion';
+import { inicioPreventa, preventaActiva, ventaHabilitada } from '../../core/utils/estrenos';
 import { CalificacionEstrellas } from '../../shared/components/calificacion-estrellas/calificacion-estrellas';
 import { DuracionPipe } from '../../shared/pipes/duracion.pipe';
 
@@ -18,6 +20,7 @@ export class PeliculaDetalle {
   readonly auth = inject(AuthService);
   readonly programacion = inject(ProgramacionService);
   readonly resenasServicio = inject(ResenaService);
+  readonly estrenos = inject(EstrenosService);
   readonly resenas = this.resenasServicio.resenas;
   readonly promedio = this.resenasServicio.promedio;
   readonly cantidadResenas = this.resenasServicio.cantidad;
@@ -25,11 +28,21 @@ export class PeliculaDetalle {
   readonly enviandoResena = signal(false);
   readonly formError = signal<string | null>(null);
   readonly formMensaje = signal<string | null>(null);
+  private readonly hoy = this.fechaISO(new Date());
   readonly resenaForm = this.fb.nonNullable.group({
     comentario: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(280)]]
   });
   readonly pelicula = computed(() => this.servicio.peliculas().find(item => item.id === this.id() && item.visible_inicio));
-  readonly funciones = computed(() => this.programacion.funcionesPorPelicula(this.id()));
+  readonly esProxima = computed(() => Boolean(this.pelicula() && this.pelicula()!.fecha_estreno > this.hoy));
+  readonly ventaDisponible = computed(() => {
+    const pelicula = this.pelicula();
+    return pelicula ? ventaHabilitada(pelicula, this.hoy) : false;
+  });
+  readonly enPreventa = computed(() => {
+    const pelicula = this.pelicula();
+    return pelicula ? preventaActiva(pelicula, this.hoy) : false;
+  });
+  readonly funciones = computed(() => this.ventaDisponible() ? this.programacion.funcionesPorPelicula(this.id()) : []);
   readonly fecha = computed(() => {
     const date = this.pelicula()?.fecha_estreno;
     if (!date) return '';
@@ -46,6 +59,11 @@ export class PeliculaDetalle {
         this.formMensaje.set(null);
         void this.resenasServicio.cargarPorPelicula(peliculaId);
       }
+    });
+    effect(() => {
+      this.id();
+      this.auth.currentUserData();
+      void this.estrenos.cargarAlertas();
     });
   }
 
@@ -80,4 +98,36 @@ export class PeliculaDetalle {
   }
 
   horaFinal(funcion: FuncionDetalle): string { return horaFin(funcion.hora_inicio, funcion.duracion_minutos); }
+
+  async alternarAlerta(): Promise<void> {
+    const peliculaId = this.pelicula()?.id;
+    if (!peliculaId) return;
+    try {
+      if (this.estrenos.tieneAlerta(peliculaId)) await this.estrenos.desactivarAlerta(peliculaId);
+      else await this.estrenos.activarAlerta(peliculaId);
+    } catch { /* El servicio muestra el mensaje. */ }
+  }
+
+  inicioVenta(): string {
+    const pelicula = this.pelicula();
+    if (!pelicula) return '';
+    return this.fechaLarga(pelicula.preventa_habilitada ? inicioPreventa(pelicula) : pelicula.fecha_estreno);
+  }
+
+  precio(centavos: number): string {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
+      .format(centavos / 100);
+  }
+
+  private fechaLarga(fecha: string): string {
+    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+      .format(new Date(`${fecha}T00:00:00Z`));
+  }
+
+  private fechaISO(fecha: Date): string {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+  }
 }

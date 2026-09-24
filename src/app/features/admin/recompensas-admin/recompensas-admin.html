@@ -1,0 +1,40 @@
+<section class="rewards-admin container">
+  <a class="back-link" routerLink="/admin/peliculas">← Volver a administración</a>
+  <header class="admin-heading">
+    <div><span class="eyebrow">ADMINISTRACIÓN / FIDELIZACIÓN</span><h1>Premiá cada visita <em>al cine.</em></h1></div>
+    <p>Creá recompensas por entradas o productos y configurá cuántos puntos necesita cada canje.</p>
+  </header>
+
+  @if (error() || servicio.error()) { <p class="form-error" role="alert">{{ error() || servicio.error() }}</p> }
+  @if (mensaje()) { <p class="form-success" role="status">{{ mensaje() }}</p> }
+
+  <div class="rewards-layout">
+    <section class="reward-list" aria-labelledby="reward-list-title">
+      <div class="list-heading"><div><span class="section-index">RF-044 / RF-045</span><h2 id="reward-list-title">Recompensas</h2></div><button class="button-outline" type="button" (click)="nuevo()">Nueva recompensa</button></div>
+      @if (servicio.cargando()) { <p class="empty-state">Cargando recompensas...</p> }
+      @for (recompensa of servicio.recompensas(); track recompensa.id) {
+        <article class="reward-row" [class.editing]="editandoId() === recompensa.id">
+          <div class="reward-cost"><strong>{{ recompensa.costo_puntos }}</strong><span>PUNTOS</span></div>
+          <div><span class="reward-type">{{ recompensa.tipo === 'entrada' ? 'ENTRADA GRATIS' : 'PRODUCTO' }}</span><h3>{{ recompensa.nombre }}</h3><p>{{ recompensa.descripcion }}</p>@if (recompensa.tipo === 'producto') { <small>{{ servicio.nombreProducto(recompensa.producto_id) }}</small> }</div>
+          <div class="row-state"><span [class.active]="recompensa.activo">{{ recompensa.activo ? 'ACTIVA' : 'OCULTA' }}</span><button type="button" (click)="editar(recompensa)">Editar ↗</button></div>
+        </article>
+      } @empty {
+        @if (!servicio.cargando()) { <p class="empty-state">Todavía no hay recompensas configuradas.</p> }
+      }
+    </section>
+
+    <form class="reward-form" [formGroup]="form" (ngSubmit)="guardar()">
+      <span class="section-index">{{ editandoId() ? 'EDITAR RECOMPENSA' : 'NUEVA RECOMPENSA' }}</span>
+      <h2>{{ editandoId() ? 'Actualizar premio' : 'Crear premio' }}</h2>
+      <div class="form-field"><label for="reward-name">Nombre</label><input id="reward-name" formControlName="nombre" placeholder="Entrada gratis">@if (form.controls.nombre.touched && form.controls.nombre.invalid) { <small class="field-error">Ingresá entre 2 y 100 caracteres.</small> }</div>
+      <div class="form-field"><label for="reward-description">Descripción</label><textarea id="reward-description" rows="4" formControlName="descripcion" placeholder="Describí qué recibe el usuario."></textarea>@if (form.controls.descripcion.touched && form.controls.descripcion.invalid) { <small class="field-error">Ingresá entre 5 y 300 caracteres.</small> }</div>
+      <div class="form-field"><label for="reward-type">Tipo</label><select id="reward-type" formControlName="tipo"><option value="entrada">Entrada gratuita</option><option value="producto">Producto del candy bar</option></select></div>
+      @if (tipoActual() === 'producto') {
+        <div class="form-field"><label for="reward-product">Producto entregado</label><select id="reward-product" formControlName="producto_id"><option value="">Elegir producto</option>@for (producto of servicio.productos.productos(); track producto.id) { <option [value]="producto.id">{{ producto.nombre }}{{ producto.activo ? '' : ' · oculto' }}</option> }</select></div>
+      }
+      <div class="form-field"><label for="reward-cost">Costo en puntos</label><input id="reward-cost" type="number" min="1" step="1" formControlName="costo_puntos">@if (form.controls.costo_puntos.touched && form.controls.costo_puntos.invalid) { <small class="field-error">Ingresá un número entero mayor a cero.</small> }</div>
+      <label class="publication-option"><input type="checkbox" formControlName="activo"><span>Recompensa activa<small>Las recompensas ocultas no pueden canjearse.</small></span></label>
+      <div class="form-actions"><button class="button-primary" type="submit" [disabled]="enviando()">{{ enviando() ? 'Guardando...' : editandoId() ? 'Guardar cambios ↗' : 'Crear recompensa ↗' }}</button>@if (editandoId()) { <button type="button" class="cancel-edit" (click)="nuevo()">Cancelar</button> }</div>
+    </form>
+  </div>
+</section>

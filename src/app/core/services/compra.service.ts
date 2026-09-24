@@ -5,6 +5,8 @@ import { FuncionDetalle } from '../models/programacion.interface';
 import { cumpleRestriccionEdad, fechaHoraFuncion, puedeCancelarCompra } from '../utils/compras';
 import { calcularEntradasFueraDeCombos } from '../utils/combo-compra';
 import { calcularDescuento } from '../utils/cupones';
+import { calcularPuntosCompra } from '../utils/fidelizacion';
+import { ventaHabilitada } from '../utils/estrenos';
 import { AuthService } from './auth.service';
 import { ButacasService } from './butacas.service';
 import { ComboCandyService } from './combo-candy.service';
@@ -48,12 +50,19 @@ export class CompraService {
     this.mensaje.set(null);
 
     try {
+      const ahora = new Date();
+      const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+      if (!ventaHabilitada(pelicula, hoy)) {
+        throw new Error('La venta de entradas todavía no comenzó.');
+      }
       const compra = this.supabase.client
         ? await this.confirmarSupabase(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId)
         : await this.confirmarDemo(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId);
-      this.mensaje.set(productos.length || combos.length
-        ? 'Compra confirmada. Tus entradas y productos quedaron en la misma operación.'
-        : 'Compra confirmada. Tu entrada ya está lista.');
+      this.mensaje.set(compra.puntos_ganados > 0
+        ? `Compra confirmada. Sumaste ${compra.puntos_ganados} puntos.`
+        : productos.length || combos.length
+          ? 'Compra confirmada. Tus entradas y productos quedaron en la misma operación.'
+          : 'Compra confirmada. Tu entrada ya está lista.');
       return compra;
     } catch (error) {
       const mensaje = error instanceof Error ? error.message : 'No se pudo completar la compra.';
@@ -104,7 +113,9 @@ export class CompraService {
       } else {
         this.cancelarDemo(compra);
       }
-      this.mensaje.set('Compra cancelada. El importe se acreditó en tu cuenta.');
+      this.mensaje.set(compra.puntos_ganados > 0
+        ? 'Compra cancelada. El importe se acreditó en tu cuenta y se descontaron los puntos de esta compra.'
+        : 'Compra cancelada. El importe se acreditó en tu cuenta.');
     } catch (error) {
       const mensaje = error instanceof Error ? error.message : 'No se pudo cancelar la compra.';
       this.error.set(mensaje);
@@ -115,7 +126,7 @@ export class CompraService {
   }
 
   puedeCancelar(compra: Compra, ahora = new Date()): boolean {
-    return compra.estado === 'pagada' && !compra.candy_retirado_en
+    return compra.estado === 'pagada' && !compra.candy_retirado_en && !compra.ingreso_validado_en
       && puedeCancelarCompra(compra.fecha_funcion, compra.hora_inicio, ahora);
   }
 
@@ -363,6 +374,7 @@ export class CompraService {
     }
     const descuento = cupon ? calcularDescuento(subtotal, cupon.porcentaje) : 0;
     const total = subtotal - descuento;
+    const puntosGanados = perfil ? calcularPuntosCompra(total) : 0;
     const creditoUsado = perfil && datos.usar_credito ? Math.min(perfil.credito_centavos, total) : 0;
     const pagoOtro = total - creditoUsado;
     const ahora = new Date().toISOString();
@@ -387,6 +399,7 @@ export class CompraService {
       cupon_id: cupon?.id ?? null,
       cupon_codigo: cupon?.codigo ?? null,
       cupon_porcentaje: cupon?.porcentaje ?? null,
+      puntos_ganados: puntosGanados,
       total_centavos: total,
       credito_usado_centavos: creditoUsado,
       pago_otro_centavos: pagoOtro,
@@ -397,6 +410,7 @@ export class CompraService {
       creada_en: ahora,
       cancelada_en: null,
       candy_retirado_en: null,
+      ingreso_validado_en: null,
       entradas,
       productos: productosConfirmados,
       combos: combosConfirmados
@@ -404,7 +418,10 @@ export class CompraService {
 
     const compras = [...this.leerComprasDemo(), compra];
     localStorage.setItem(DEMO_COMPRAS_KEY, JSON.stringify(compras));
-    if (perfil) this.auth.actualizarCreditoDemo(perfil.credito_centavos - creditoUsado);
+    if (perfil) {
+      this.auth.actualizarCreditoDemo(perfil.credito_centavos - creditoUsado);
+      this.auth.actualizarPuntosDemo(perfil.puntos + puntosGanados);
+    }
     await this.butacas.marcarCompraConfirmada();
     this.peliculas.actualizarEntradasVendidasDemo(pelicula.id, entradas.length);
     if (perfil) await this.cargarCompras();
@@ -415,7 +432,9 @@ export class CompraService {
     const perfil = this.auth.currentUserData();
     if (!perfil || compra.usuario_id !== perfil.id) throw new Error('La compra no pertenece a tu cuenta.');
     if (compra.candy_retirado_en) throw new Error('La compra no puede cancelarse porque el pedido del candy ya fue retirado.');
+    if (compra.ingreso_validado_en) throw new Error('La entrada ya fue utilizada y no puede cancelarse.');
     if (!this.puedeCancelar(compra)) throw new Error('La cancelación solo está disponible hasta 2 horas antes de la función.');
+    if (perfil.puntos < compra.puntos_ganados) throw new Error('No podés cancelar porque ya utilizaste los puntos obtenidos con esta compra.');
 
     const canceladaEn = new Date().toISOString();
     const compras = this.leerComprasDemo().map(item => item.id === compra.id
@@ -423,6 +442,7 @@ export class CompraService {
       : item);
     localStorage.setItem(DEMO_COMPRAS_KEY, JSON.stringify(compras));
     this.auth.actualizarCreditoDemo(perfil.credito_centavos + compra.total_centavos);
+    this.auth.actualizarPuntosDemo(perfil.puntos - compra.puntos_ganados);
     this.butacas.liberarCompraDemo(compra.funcion_id, compra.fecha_funcion, compra.entradas.map(entrada => entrada.butaca_codigo));
     this.peliculas.actualizarEntradasVendidasDemo(compra.pelicula_id, -compra.entradas.length);
     this.comprasSignal.set(compras.filter(item => item.usuario_id === perfil.id).sort((a, b) => b.creada_en.localeCompare(a.creada_en)));
@@ -456,6 +476,7 @@ export class CompraService {
       cupon_id: resultado.cupon_id,
       cupon_codigo: resultado.cupon_codigo,
       cupon_porcentaje: resultado.cupon_porcentaje == null ? null : Number(resultado.cupon_porcentaje),
+      puntos_ganados: Number(resultado.puntos_ganados),
       total_centavos: Number(resultado.total_centavos),
       credito_usado_centavos: Number(resultado.credito_usado_centavos),
       pago_otro_centavos: Number(resultado.pago_otro_centavos),
@@ -466,6 +487,7 @@ export class CompraService {
       creada_en: resultado.creada_en,
       cancelada_en: null,
       candy_retirado_en: null,
+      ingreso_validado_en: null,
       entradas,
       productos: this.normalizarProductos(resultado.productos),
       combos: this.normalizarCombos(resultado.combos)
@@ -506,6 +528,7 @@ export class CompraService {
       cupon_id: compra.cupon_id ?? null,
       cupon_codigo: compra.cupon_codigo ?? null,
       cupon_porcentaje: compra.cupon_porcentaje == null ? null : Number(compra.cupon_porcentaje),
+      puntos_ganados: Number(compra.puntos_ganados ?? 0),
       total_centavos: Number(compra.total_centavos),
       credito_usado_centavos: Number(compra.credito_usado_centavos),
       pago_otro_centavos: Number(compra.pago_otro_centavos),
@@ -513,6 +536,7 @@ export class CompraService {
         ...entrada, precio_centavos: Number(entrada.precio_centavos)
       })) : [],
       candy_retirado_en: compra.candy_retirado_en ?? null,
+      ingreso_validado_en: compra.ingreso_validado_en ?? null,
       productos,
       combos
     };

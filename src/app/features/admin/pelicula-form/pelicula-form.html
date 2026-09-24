@@ -1,1 +1,74 @@
-<section class="movie-form-page"><div class="container"><a class="back-link" routerLink="/admin/peliculas">← Volver a administración</a><div class="form-layout"><div class="form-intro"><span class="eyebrow">ADMINISTRACIÓN / {{ editando() ? 'EDICIÓN' : 'ALTA' }}</span><h1>{{ editando() ? 'Editar' : 'Una nueva' }} <em>historia.</em></h1><p>Los datos de la película se publican en la cartelera cuando activás su visibilidad. Seleccioná todos los géneros que correspondan.</p><div class="intro-symbol" aria-hidden="true">✳</div></div><form class="movie-form" [formGroup]="form" (ngSubmit)="guardar()" novalidate><div class="form-field"><label for="titulo">Nombre de la película</label><input id="titulo" formControlName="titulo" placeholder="Ej. La última luz">@if(form.controls.titulo.touched && form.controls.titulo.invalid) { <small class="field-error">Ingresá entre 2 y 120 caracteres.</small> }</div><div class="form-field"><label for="sinopsis">Sinopsis</label><textarea id="sinopsis" formControlName="sinopsis" rows="5" placeholder="Contá de qué trata..." ></textarea>@if(form.controls.sinopsis.touched && form.controls.sinopsis.invalid) { <small class="field-error">Ingresá entre 15 y 1200 caracteres.</small> }</div><div class="two-cols"><div class="form-field"><label for="duracion">Duración en minutos</label><input id="duracion" type="number" min="1" max="600" formControlName="duracion_minutos">@if(form.controls.duracion_minutos.touched && form.controls.duracion_minutos.invalid) { <small class="field-error">Ingresá entre 1 y 600 minutos.</small> }</div><div class="form-field"><label for="estreno">Fecha de estreno</label><input id="estreno" type="date" formControlName="fecha_estreno">@if(form.controls.fecha_estreno.touched && form.controls.fecha_estreno.invalid) { <small class="field-error">Elegí una fecha.</small> }</div></div><div class="form-field"><label for="imagen">URL de la imagen / póster</label><input id="imagen" type="url" formControlName="imagen_url" placeholder="https://... o /posters/archivo.svg">@if(form.controls.imagen_url.touched && form.controls.imagen_url.invalid) { <small class="field-error">Usá una URL https o una ruta /posters/.</small> }</div><fieldset class="genre-field"><legend>Géneros (uno o más)</legend><div class="genre-options">@for(genero of generosDisponibles; track genero) { <label><input type="checkbox" [checked]="tieneGenero(genero)" (change)="toggleGenero(genero)"><span>{{ genero }}</span></label> }</div></fieldset><div class="two-cols"><div class="form-field"><label for="clasificacion">Restricción de edad</label><select id="clasificacion" formControlName="clasificacion"><option value="ATP">Sin restricción · ATP</option><option value="13">Mayores de 13 años</option><option value="18">Mayores de 18 años</option></select></div><label class="visibility"><input type="checkbox" formControlName="visible_inicio"><span>Mostrar en la página principal</span></label></div>@if(error()) { <p class="form-error" role="alert">{{ error() }}</p> }<button class="button-primary" type="submit" [disabled]="enviando()">{{ enviando() ? 'Guardando...' : editando() ? 'Guardar cambios ↗' : 'Crear película ↗' }}</button></form></div></div></section>
+<section class="movie-form-page">
+  <div class="container">
+    <a class="back-link" routerLink="/admin/peliculas">← Volver a administración</a>
+    <div class="form-layout">
+      <div class="form-intro">
+        <span class="eyebrow">ADMINISTRACIÓN / {{ editando() ? 'EDICIÓN' : 'ALTA' }}</span>
+        <h1>{{ editando() ? 'Editar' : 'Una nueva' }} <em>historia.</em></h1>
+        <p>Los datos de la película se publican en la cartelera cuando activás su visibilidad. Seleccioná todos los géneros que correspondan.</p>
+        <div class="intro-symbol" aria-hidden="true">✳</div>
+      </div>
+
+      <form class="movie-form" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+        <div class="form-field">
+          <label for="titulo">Nombre de la película</label>
+          <input id="titulo" formControlName="titulo" placeholder="Ej. La última luz">
+          @if (form.controls.titulo.touched && form.controls.titulo.invalid) { <small class="field-error">Ingresá entre 2 y 120 caracteres.</small> }
+        </div>
+        <div class="form-field">
+          <label for="sinopsis">Sinopsis</label>
+          <textarea id="sinopsis" formControlName="sinopsis" rows="5" placeholder="Contá de qué trata..."></textarea>
+          @if (form.controls.sinopsis.touched && form.controls.sinopsis.invalid) { <small class="field-error">Ingresá entre 15 y 1200 caracteres.</small> }
+        </div>
+        <div class="two-cols">
+          <div class="form-field">
+            <label for="duracion">Duración en minutos</label>
+            <input id="duracion" type="number" min="1" max="600" formControlName="duracion_minutos">
+            @if (form.controls.duracion_minutos.touched && form.controls.duracion_minutos.invalid) { <small class="field-error">Ingresá entre 1 y 600 minutos.</small> }
+          </div>
+          <div class="form-field">
+            <label for="estreno">Fecha de estreno</label>
+            <input id="estreno" type="date" formControlName="fecha_estreno">
+            @if (form.controls.fecha_estreno.touched && form.controls.fecha_estreno.invalid) { <small class="field-error">Elegí una fecha.</small> }
+          </div>
+        </div>
+        <div class="presale-box">
+          <label class="visibility"><input type="checkbox" formControlName="preventa_habilitada"><span>Habilitar preventa desde 7 días antes del estreno</span></label>
+          @if (form.controls.preventa_habilitada.value) {
+            <div class="form-field">
+              <label for="precio-preventa">Precio especial de preventa</label>
+              <input id="precio-preventa" type="number" min="1" step="1" formControlName="precio_preventa" placeholder="Ej. 6000">
+              <small>Ingresá el importe en pesos. Al llegar el estreno se restablece el precio normal.</small>
+            </div>
+          }
+        </div>
+        <div class="form-field">
+          <label for="imagen">URL de la imagen / póster</label>
+          <input id="imagen" type="url" formControlName="imagen_url" placeholder="https://... o /posters/archivo.svg">
+          @if (form.controls.imagen_url.touched && form.controls.imagen_url.invalid) { <small class="field-error">Usá una URL https o una ruta /posters/.</small> }
+        </div>
+        <fieldset class="genre-field">
+          <legend>Géneros (uno o más)</legend>
+          <div class="genre-options">
+            @for (genero of generosDisponibles; track genero) {
+              <label><input type="checkbox" [checked]="tieneGenero(genero)" (change)="toggleGenero(genero)"><span>{{ genero }}</span></label>
+            }
+          </div>
+        </fieldset>
+        <div class="two-cols">
+          <div class="form-field">
+            <label for="clasificacion">Restricción de edad</label>
+            <select id="clasificacion" formControlName="clasificacion">
+              <option value="ATP">Sin restricción · ATP</option>
+              <option value="13">Mayores de 13 años</option>
+              <option value="18">Mayores de 18 años</option>
+            </select>
+          </div>
+          <label class="visibility"><input type="checkbox" formControlName="visible_inicio"><span>Mostrar en la página principal</span></label>
+        </div>
+        @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+        <button class="button-primary" type="submit" [disabled]="enviando()">{{ enviando() ? 'Guardando...' : editando() ? 'Guardar cambios ↗' : 'Crear película ↗' }}</button>
+      </form>
+    </div>
+  </div>
+</section>

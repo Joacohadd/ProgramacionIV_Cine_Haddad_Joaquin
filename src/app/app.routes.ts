@@ -12,7 +12,8 @@ export const routes: Routes = [
   { path: 'registro', loadComponent: () => import('./features/auth/registro/registro').then(c => c.Registro) },
   { path: 'login', loadComponent: () => import('./features/auth/login/login').then(c => c.Login) },
   { path: 'perfil', canActivate: [authGuard], loadComponent: () => import('./features/perfil/perfil').then(c => c.PerfilComponent) },
-  { path: 'personal/retiro-candy', canActivate: [personalGuard], loadComponent: () => import('./features/retiro-candy/retiro-candy').then(c => c.RetiroCandyComponent) },
+  { path: 'personal/validacion', canActivate: [personalGuard], loadComponent: () => import('./features/retiro-candy/retiro-candy').then(c => c.RetiroCandyComponent) },
+  { path: 'personal/retiro-candy', redirectTo: 'personal/validacion' },
   { path: 'admin/peliculas', canActivate: [adminGuard], loadComponent: () => import('./features/admin/peliculas-admin/peliculas-admin').then(c => c.PeliculasAdmin) },
   { path: 'admin/peliculas/nueva', canActivate: [adminGuard], loadComponent: () => import('./features/admin/pelicula-form/pelicula-form').then(c => c.PeliculaForm) },
   { path: 'admin/peliculas/:id', canActivate: [adminGuard], loadComponent: () => import('./features/admin/pelicula-form/pelicula-form').then(c => c.PeliculaForm) },
@@ -20,5 +21,8 @@ export const routes: Routes = [
   { path: 'admin/productos', canActivate: [adminGuard], loadComponent: () => import('./features/admin/productos-admin/productos-admin').then(c => c.ProductosAdmin) },
   { path: 'admin/combos', canActivate: [adminGuard], loadComponent: () => import('./features/admin/combos-admin/combos-admin').then(c => c.CombosAdmin) },
   { path: 'admin/cupones', canActivate: [adminGuard], loadComponent: () => import('./features/admin/cupones-admin/cupones-admin').then(c => c.CuponesAdmin) },
+  { path: 'admin/recompensas', canActivate: [adminGuard], loadComponent: () => import('./features/admin/recompensas-admin/recompensas-admin').then(c => c.RecompensasAdmin) },
+  { path: 'admin/actividad', canActivate: [adminGuard], loadComponent: () => import('./features/admin/actividad-admin/actividad-admin').then(c => c.ActividadAdmin) },
+  { path: 'admin/reportes', canActivate: [adminGuard], loadComponent: () => import('./features/admin/reportes-admin/reportes-admin').then(c => c.ReportesAdmin) },
   { path: '**', redirectTo: '' }
 ];

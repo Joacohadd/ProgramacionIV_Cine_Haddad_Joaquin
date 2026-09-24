@@ -22,7 +22,9 @@ export class PeliculaForm {
     imagen_url: ['', [Validators.required, Validators.pattern(/^(https:\/\/|\/posters\/).+/)]],
     clasificacion: ['ATP' as Clasificacion, Validators.required],
     visible_inicio: [true],
-    fecha_estreno: ['', Validators.required]
+    fecha_estreno: ['', Validators.required],
+    preventa_habilitada: [false],
+    precio_preventa: this.fb.control<number | null>(null, [Validators.min(1)])
   });
 
   constructor() {
@@ -30,7 +32,12 @@ export class PeliculaForm {
       const id = this.id();
       const actual = id && this.servicio.peliculas().find(item => item.id === id);
       if (actual) {
-        this.form.patchValue(actual, { emitEvent: false });
+        this.form.patchValue({
+          ...actual,
+          precio_preventa: actual.precio_preventa_centavos == null
+            ? null
+            : actual.precio_preventa_centavos / 100
+        }, { emitEvent: false });
         this.generosSeleccionados.set([...actual.generos]);
       }
     });
@@ -49,8 +56,20 @@ export class PeliculaForm {
       if (!this.generosSeleccionados().length) this.error.set('Elegí al menos un género.');
       return;
     }
+    const valores = this.form.getRawValue();
+    if (valores.preventa_habilitada && (!valores.precio_preventa || valores.precio_preventa <= 0)) {
+      this.error.set('Ingresá un precio especial mayor a cero para habilitar la preventa.');
+      return;
+    }
     this.enviando.set(true);
-    const pelicula: PeliculaEditable = { ...this.form.getRawValue(), generos: this.generosSeleccionados() };
+    const { precio_preventa, ...datosPelicula } = valores;
+    const pelicula: PeliculaEditable = {
+      ...datosPelicula,
+      precio_preventa_centavos: datosPelicula.preventa_habilitada && precio_preventa
+        ? Math.round(precio_preventa * 100)
+        : null,
+      generos: this.generosSeleccionados()
+    };
     try {
       await this.servicio.guardar(pelicula, this.id());
       void this.router.navigate(['/admin/peliculas']);

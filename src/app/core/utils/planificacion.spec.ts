@@ -25,7 +25,11 @@ describe('planificación de funciones', () => {
       { id: 's1', nombre: 'Sala 1', filas: 20, butacas_izquierda: 4, butacas_centro: 20, butacas_derecha: 4, formatos: ['2D'], activa: true },
       { id: 's2', nombre: 'Sala 2', filas: 20, butacas_izquierda: 4, butacas_centro: 20, butacas_derecha: 4, formatos: ['2D', '3D'], activa: true }
     ];
-    const ocupada: FuncionDetalle = { ...base, id: 'f1', sala_id: 's1', pelicula_titulo: 'Película', pelicula_imagen_url: '', duracion_minutos: 114, sala_nombre: 'Sala 1' };
+    const ocupada: FuncionDetalle = {
+      ...base, id: 'f1', sala_id: 's1', pelicula_titulo: 'Película', pelicula_imagen_url: '',
+      duracion_minutos: 114, sala_nombre: 'Sala 1', fecha_estreno: '2026-09-01',
+      preventa_habilitada: false, precio_preventa_centavos: null
+    };
     expect(buscarSalaDisponible(salas, [ocupada], PELICULAS_DEMO, base)?.id).toBe('s2');
   });
 

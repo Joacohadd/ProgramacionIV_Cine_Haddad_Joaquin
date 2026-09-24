@@ -5,7 +5,7 @@
     <section class="detail-grid" aria-labelledby="movie-title">
       <div class="detail-poster">
         <img [src]="actual.imagen_url" [alt]="'Póster de ' + actual.titulo">
-        <span>UMBRAL / EN CARTELERA</span>
+        <span>UMBRAL / {{ esProxima() ? 'PRÓXIMAMENTE' : 'EN CARTELERA' }}</span>
       </div>
 
       <div class="detail-copy">
@@ -29,6 +29,26 @@
           <div><span>ENTRADAS VENDIDAS</span><strong>{{ actual.entradas_vendidas }}</strong></div>
         </div>
 
+        @if (esProxima()) {
+          <div class="release-box" [class.presale]="enPreventa()">
+            @if (enPreventa() && actual.precio_preventa_centavos) {
+              <span>PREVENTA ABIERTA</span>
+              <strong>Entradas desde {{ precio(actual.precio_preventa_centavos) }}</strong>
+              <p>El precio especial está disponible hasta el día anterior al estreno.</p>
+            } @else {
+              <span>PRÓXIMO ESTRENO</span>
+              <strong>Venta desde {{ inicioVenta() }}</strong>
+              @if (auth.currentUserData()) {
+                <button type="button" [disabled]="estrenos.procesando()" (click)="alternarAlerta()">{{ estrenos.tieneAlerta(actual.id) ? 'Alerta activada ✓' : 'Avisarme cuando comience la venta' }}</button>
+              } @else {
+                <a routerLink="/login">Ingresar para activar una alerta →</a>
+              }
+            }
+            @if (estrenos.mensaje()) { <small role="status">{{ estrenos.mensaje() }}</small> }
+            @if (estrenos.error()) { <small class="error" role="alert">{{ estrenos.error() }}</small> }
+          </div>
+        }
+
         <p class="detail-note">Elegí una función para ver la sala, la disponibilidad en tiempo real y seleccionar tus butacas.</p>
         <a class="button-primary" routerLink="/">Ver más películas ↗</a>
       </div>
@@ -41,7 +61,9 @@
       </div>
       @if (programacion.cargando()) { <p class="showtimes-state">Cargando funciones...</p> }
       @if (programacion.error()) { <p class="showtimes-state">Las funciones todavía no están disponibles.</p> }
-      @if (!programacion.cargando() && !programacion.error()) {
+      @if (!ventaDisponible()) {
+        <p class="showtimes-state">La venta todavía no comenzó. Podés activar una alerta para recibir el aviso.</p>
+      } @else if (!programacion.cargando() && !programacion.error()) {
         <div class="showtimes-grid">
           @for (funcion of funciones(); track funcion.id) {
             <article class="showtime-card">

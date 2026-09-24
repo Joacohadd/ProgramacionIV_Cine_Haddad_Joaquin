@@ -67,7 +67,10 @@ export class ProgramacionService {
         pelicula_titulo: pelicula.titulo,
         pelicula_imagen_url: pelicula.imagen_url,
         duracion_minutos: pelicula.duracion_minutos,
-        sala_nombre: sala.nombre
+        sala_nombre: sala.nombre,
+        fecha_estreno: pelicula.fecha_estreno,
+        preventa_habilitada: pelicula.preventa_habilitada,
+        precio_preventa_centavos: pelicula.precio_preventa_centavos
       }];
     });
   }

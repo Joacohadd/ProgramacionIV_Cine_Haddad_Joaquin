@@ -27,7 +27,7 @@ function distribucionFila(sala: Sala, tipo: TipoButaca): [number, number, number
     : [sala.butacas_izquierda, sala.butacas_centro, sala.butacas_derecha];
 }
 
-export function generarMapaButacas(sala: Sala): FilaButacas[] {
+export function generarMapaButacas(sala: Sala, precioBaseCentavos = PRECIO_BUTACA_CENTAVOS): FilaButacas[] {
   return Array.from({ length: sala.filas }, (_, indiceFila) => {
     const etiqueta = etiquetaFila(indiceFila + 1);
     const tipo = tipoFila(etiqueta);
@@ -41,7 +41,7 @@ export function generarMapaButacas(sala: Sala): FilaButacas[] {
         numero,
         sector: nombresSectores[indiceSector],
         tipo,
-        precio_centavos: PRECIO_BUTACA_CENTAVOS + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0)
+        precio_centavos: precioBaseCentavos + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0)
       };
       numero++;
       return butaca;

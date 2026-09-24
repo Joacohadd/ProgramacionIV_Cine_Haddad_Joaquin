@@ -1,7 +1,30 @@
+@for (alerta of estrenos.notificaciones(); track alerta.pelicula_id) {
+  <aside class="release-notification" role="status">
+    <div class="container">
+      <span>AVISO DE ESTRENO</span>
+      <p>Ya podés comprar entradas para <strong>{{ alerta.pelicula_titulo }}</strong>.</p>
+      <a [routerLink]="['/pelicula', alerta.pelicula_id]">Ver funciones →</a>
+      <button type="button" aria-label="Cerrar aviso" (click)="estrenos.descartarNotificacion(alerta.pelicula_id)">×</button>
+    </div>
+  </aside>
+}
+
 <section class="hero">
-  <div class="hero-copy"><p class="eyebrow"><span class="spark">✳</span> EL CINE COMO DEBE SENTIRSE <span class="hero-number">/ 2026</span></p><h1>Historias que <em>te atraviesan.</em></h1><p class="hero-description">Descubrí películas para quedarte un rato más, pensar un poco más y volver a mirar.</p><a class="button-light" href="#cartelera">Explorar cartelera <span aria-hidden="true">↗</span></a><div class="hero-aside"><span>01 / UN CINE, MUCHAS MIRADAS</span><span class="hero-circle" aria-hidden="true">✳</span></div></div>
-  @if (peliculaPrincipal(); as principal) { <div class="hero-visual"><img [src]="principal.imagen_url" [alt]="'Póster de ' + principal.titulo"><div class="hero-visual-caption"><span>LA MÁS ELEGIDA EN CARTELERA</span><strong>{{ principal.titulo }}</strong><span>{{ principal.duracion_minutos | duracion }} · {{ principal.generos.join(' / ') }}</span></div></div> }
+  <div class="hero-copy">
+    <p class="eyebrow"><span class="spark">✳</span> EL CINE COMO DEBE SENTIRSE <span class="hero-number">/ 2026</span></p>
+    <h1>Historias que <em>te atraviesan.</em></h1>
+    <p class="hero-description">Descubrí películas para quedarte un rato más, pensar un poco más y volver a mirar.</p>
+    <a class="button-light" href="#cartelera">Explorar cartelera <span aria-hidden="true">↗</span></a>
+    <div class="hero-aside"><span>01 / UN CINE, MUCHAS MIRADAS</span><span class="hero-circle" aria-hidden="true">✳</span></div>
+  </div>
+  @if (peliculaPrincipal(); as principal) {
+    <div class="hero-visual">
+      <img [src]="principal.imagen_url" [alt]="'Póster de ' + principal.titulo">
+      <div class="hero-visual-caption"><span>LA MÁS ELEGIDA EN CARTELERA</span><strong>{{ principal.titulo }}</strong><span>{{ principal.duracion_minutos | duracion }} · {{ principal.generos.join(' / ') }}</span></div>
+    </div>
+  }
 </section>
+
 <section id="cartelera" class="catalog container">
   <div class="section-heading"><div><p class="eyebrow">CARTELERA / EN PANTALLA</p><h2>Elegí tu próxima <em>historia.</em></h2></div><span class="section-count">{{ peliculasFiltradas().length.toString().padStart(2, '0') }} películas disponibles</span></div>
   <div class="filters"><app-buscador [(termino)]="termino" /><div class="genre-filter"><span class="eyebrow">FILTRAR POR GÉNERO</span><div class="genre-buttons" role="group" aria-label="Filtrar películas por género">@for (item of generos(); track item) { <button type="button" [class.selected]="genero() === item" [attr.aria-pressed]="genero() === item" (click)="genero.set(item)">{{ item }}</button> }</div></div></div>
@@ -11,6 +34,47 @@
     <div class="catalog-label"><span>{{ filtrando() ? 'RESULTADOS DE BÚSQUEDA' : 'TOP 3 / LAS MÁS VENDIDAS' }}</span><span>ORDENADAS POR ENTRADAS VENDIDAS ↓</span></div>
     <div class="movie-grid">@for (pelicula of destacadas(); track pelicula.id; let i = $index) { <app-pelicula-card [pelicula]="pelicula" [ranking]="filtrando() ? null : i + 1" (ver)="verDetalle($event)" /> }</div>
     @if (resto().length) { <div class="catalog-label more-label"><span>MÁS EN CARTELERA</span><span>{{ resto().length }} PARA DESCUBRIR</span></div><div class="movie-grid">@for (pelicula of resto(); track pelicula.id) { <app-pelicula-card [pelicula]="pelicula" (ver)="verDetalle($event)" /> }</div> }
-  } @else if (!servicio.cargando() && !servicio.error()) { <div class="empty-results"><span aria-hidden="true">✳</span><h3>No encontramos esa película.</h3><p>Probá con otro título o elegí un género diferente.</p><button type="button" class="button-outline" (click)="limpiarFiltros()">Limpiar filtros ↗</button></div> }
+  } @else if (!servicio.cargando() && !servicio.error()) {
+    <div class="empty-results"><span aria-hidden="true">✳</span><h3>No encontramos esa película.</h3><p>Probá con otro título o elegí un género diferente.</p><button type="button" class="button-outline" (click)="limpiarFiltros()">Limpiar filtros ↗</button></div>
+  }
 </section>
+
+@if (proximamente().length) {
+  <section class="coming-soon">
+    <div class="container">
+      <div class="coming-heading">
+        <div><p class="eyebrow">4.10 / PRÓXIMAMENTE</p><h2>Lo que viene <em>después.</em></h2></div>
+        <p>Activá una alerta y te avisamos cuando se habilite la venta. Las preventas comienzan exactamente siete días antes del estreno.</p>
+      </div>
+      @if (estrenos.error()) { <p class="catalog-alert" role="alert">{{ estrenos.error() }}</p> }
+      @if (estrenos.mensaje()) { <p class="release-message" role="status">{{ estrenos.mensaje() }}</p> }
+      <div class="coming-grid">
+        @for (pelicula of proximamente(); track pelicula.id) {
+          <article class="coming-card">
+            <a [routerLink]="['/pelicula', pelicula.id]" class="coming-poster"><img [src]="pelicula.imagen_url" [alt]="'Póster de ' + pelicula.titulo"></a>
+            <div class="coming-copy">
+              <span>{{ enPreventa(pelicula) ? 'PREVENTA ABIERTA' : 'PRÓXIMO ESTRENO' }}</span>
+              <h3><a [routerLink]="['/pelicula', pelicula.id]">{{ pelicula.titulo }}</a></h3>
+              <p>Estreno {{ fechaLarga(pelicula.fecha_estreno) }}</p>
+              @if (enPreventa(pelicula) && pelicula.precio_preventa_centavos) {
+                <strong>Precio especial {{ precio(pelicula.precio_preventa_centavos) }}</strong>
+                <a class="coming-action primary" [routerLink]="['/pelicula', pelicula.id]">Comprar en preventa →</a>
+              } @else if (ventaDisponible(pelicula)) {
+                <a class="coming-action primary" [routerLink]="['/pelicula', pelicula.id]">Ver funciones →</a>
+              } @else {
+                <small>Venta desde {{ inicioVenta(pelicula) }}</small>
+                @if (auth.currentUserData()) {
+                  <button class="coming-action" type="button" [disabled]="estrenos.procesando()" (click)="alternarAlerta(pelicula.id)">{{ estrenos.tieneAlerta(pelicula.id) ? 'Alerta activada ✓' : 'Avisarme cuando haya entradas' }}</button>
+                } @else {
+                  <a class="coming-action" routerLink="/login">Ingresar para activar alerta</a>
+                }
+              }
+            </div>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+}
+
 <section class="closing-band"><div class="container"><span class="eyebrow">UMBRAL CINE</span><p>Para las historias que<br><em>no terminan en los créditos.</em></p><span class="closing-star" aria-hidden="true">✳</span></div></section>

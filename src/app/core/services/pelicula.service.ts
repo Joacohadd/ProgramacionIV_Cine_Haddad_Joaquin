@@ -38,7 +38,9 @@ export class PeliculaService {
     return {
       ...pelicula,
       promedio_calificacion: Number(pelicula.promedio_calificacion ?? 0),
-      cantidad_resenas: Number(pelicula.cantidad_resenas ?? 0)
+      cantidad_resenas: Number(pelicula.cantidad_resenas ?? 0),
+      preventa_habilitada: Boolean(pelicula.preventa_habilitada),
+      precio_preventa_centavos: pelicula.precio_preventa_centavos == null ? null : Number(pelicula.precio_preventa_centavos)
     } as Pelicula;
   }
 

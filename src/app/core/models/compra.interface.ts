@@ -47,6 +47,7 @@ export interface Compra {
   cupon_id: string | null;
   cupon_codigo: string | null;
   cupon_porcentaje: number | null;
+  puntos_ganados: number;
   total_centavos: number;
   credito_usado_centavos: number;
   pago_otro_centavos: number;
@@ -57,6 +58,7 @@ export interface Compra {
   creada_en: string;
   cancelada_en: string | null;
   candy_retirado_en: string | null;
+  ingreso_validado_en: string | null;
   entradas: EntradaCompra[];
   productos: ProductoCompra[];
   combos: ComboCompra[];
@@ -81,6 +83,7 @@ export interface ResultadoCompraRpc {
   cupon_id: string | null;
   cupon_codigo: string | null;
   cupon_porcentaje: number | null;
+  puntos_ganados: number;
   total_centavos: number;
   credito_usado_centavos: number;
   pago_otro_centavos: number;

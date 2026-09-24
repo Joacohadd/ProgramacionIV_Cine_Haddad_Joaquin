@@ -4,20 +4,31 @@
     <a class="brand" routerLink="/" aria-label="Umbral Cine, ir al inicio"><span class="brand-mark"></span><span>umbral<span class="brand-dot">.</span></span></a>
     <button class="menu-toggle" type="button" [attr.aria-expanded]="menuOpen()" aria-controls="nav-principal" (click)="menuOpen.set(!menuOpen())">Menú <span aria-hidden="true">☰</span></button>
     <nav id="nav-principal" class="main-nav" [class.open]="menuOpen()" aria-label="Navegación principal">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="menuOpen.set(false)">Cartelera</a>
-      <a routerLink="/candy" routerLinkActive="active" (click)="menuOpen.set(false)">Candy bar</a>
-      <a *appRole="'admin'" routerLink="/admin/peliculas" routerLinkActive="active" (click)="menuOpen.set(false)">Películas</a>
-      <a *appRole="'admin'" routerLink="/admin/programacion" routerLinkActive="active" (click)="menuOpen.set(false)">Funciones</a>
-      <a *appRole="'admin'" routerLink="/admin/productos" routerLinkActive="active" (click)="menuOpen.set(false)">Productos</a>
-      <a *appRole="'admin'" routerLink="/admin/combos" routerLinkActive="active" (click)="menuOpen.set(false)">Combos</a>
-      <a *appRole="'admin'" routerLink="/admin/cupones" routerLinkActive="active" (click)="menuOpen.set(false)">Cupones</a>
-      <a *appRole="['empleado', 'admin']" routerLink="/personal/retiro-candy" routerLinkActive="active" (click)="menuOpen.set(false)">Retiro candy</a>
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="cerrarNavegacion()">Cartelera</a>
+      <a routerLink="/candy" routerLinkActive="active" (click)="cerrarNavegacion()">Candy bar</a>
+      <div *appRole="'admin'" class="admin-nav" [class.open]="adminOpen()" routerLinkActive="active">
+        <button class="admin-trigger" type="button" [attr.aria-expanded]="adminOpen()" aria-controls="admin-links" (click)="adminOpen.set(!adminOpen())">
+          Administración <span class="admin-chevron" aria-hidden="true"></span>
+        </button>
+        <div id="admin-links" class="admin-dropdown" [class.open]="adminOpen()">
+          <a routerLink="/admin/peliculas" routerLinkActive="active" (click)="cerrarNavegacion()">Películas</a>
+          <a routerLink="/admin/programacion" routerLinkActive="active" (click)="cerrarNavegacion()">Funciones</a>
+          <a routerLink="/admin/productos" routerLinkActive="active" (click)="cerrarNavegacion()">Productos</a>
+          <a routerLink="/admin/combos" routerLinkActive="active" (click)="cerrarNavegacion()">Combos</a>
+          <a routerLink="/admin/cupones" routerLinkActive="active" (click)="cerrarNavegacion()">Cupones</a>
+          <a routerLink="/admin/recompensas" routerLinkActive="active" (click)="cerrarNavegacion()">Recompensas</a>
+          <a routerLink="/admin/actividad" routerLinkActive="active" (click)="cerrarNavegacion()">Actividad</a>
+          <a routerLink="/personal/validacion" routerLinkActive="active" (click)="cerrarNavegacion()">Validar entradas</a>
+        </div>
+      </div>
+      <a *appRole="'admin'" routerLink="/admin/reportes" routerLinkActive="active" (click)="cerrarNavegacion()">Reportes</a>
+      <a *appRole="'empleado'" routerLink="/personal/validacion" routerLinkActive="active" (click)="cerrarNavegacion()">Validar entradas</a>
       @if (auth.currentUserData()) {
-        <a routerLink="/perfil" routerLinkActive="active" (click)="menuOpen.set(false)">Mi perfil</a>
+        <a routerLink="/perfil" routerLinkActive="active" (click)="cerrarNavegacion()">Mi perfil</a>
         <button type="button" class="nav-text-button" (click)="salir()">Salir</button>
       } @else {
-        <a routerLink="/login" routerLinkActive="active" (click)="menuOpen.set(false)">Ingresar</a>
-        <a class="nav-cta" routerLink="/registro" (click)="menuOpen.set(false)">Crear cuenta <span aria-hidden="true">↗</span></a>
+        <a routerLink="/login" routerLinkActive="active" (click)="cerrarNavegacion()">Ingresar</a>
+        <a class="nav-cta" routerLink="/registro" (click)="cerrarNavegacion()">Crear cuenta <span aria-hidden="true">↗</span></a>
       }
     </nav>
   </div>

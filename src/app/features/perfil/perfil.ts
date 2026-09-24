@@ -3,11 +3,17 @@ import { RouterLink } from '@angular/router';
 import { Compra } from '../../core/models/compra.interface';
 import { AuthService } from '../../core/services/auth.service';
 import { CompraService } from '../../core/services/compra.service';
+import { FidelizacionService } from '../../core/services/fidelizacion.service';
+import { Recompensa } from '../../core/models/recompensa.interface';
+import { PeliculaVista } from '../../core/models/estreno.interface';
+import { EstrenosService } from '../../core/services/estrenos.service';
 
 @Component({ selector: 'app-perfil', imports: [RouterLink], templateUrl: './perfil.html', styleUrl: './perfil.css' })
 export class PerfilComponent {
   readonly auth = inject(AuthService);
   readonly compras = inject(CompraService);
+  readonly fidelizacion = inject(FidelizacionService);
+  readonly estrenos = inject(EstrenosService);
   readonly errorDocumento = signal<string | null>(null);
   readonly credito = computed(() => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format((this.auth.currentUserData()?.credito_centavos ?? 0) / 100));
   readonly nacimiento = computed(() => {
@@ -17,7 +23,14 @@ export class PerfilComponent {
 
   constructor() {
     effect(() => {
-      if (this.auth.currentUserData()?.id) void this.compras.cargarCompras();
+      if (this.auth.currentUserData()?.id) {
+        void Promise.all([
+          this.compras.cargarCompras(),
+          this.fidelizacion.cargarPerfil(),
+          this.estrenos.cargarAlertas(),
+          this.estrenos.cargarMisPeliculas()
+        ]);
+      }
     });
   }
 
@@ -31,6 +44,20 @@ export class PerfilComponent {
     try { await this.compras.cancelar(compra); } catch { /* El servicio muestra el error. */ }
   }
 
+  async canjear(recompensa: Recompensa): Promise<void> {
+    try { await this.fidelizacion.canjear(recompensa); } catch { /* El servicio muestra el error. */ }
+  }
+
+  puedeCanjear(recompensa: Recompensa): boolean {
+    return (this.auth.currentUserData()?.puntos ?? 0) >= recompensa.costo_puntos;
+  }
+
+  fechaCanje(fecha: string): string {
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(fecha));
+  }
+
   precio(centavos: number): string {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency', currency: 'ARS', maximumFractionDigits: 0
@@ -41,5 +68,15 @@ export class PerfilComponent {
     return new Intl.DateTimeFormat('es-AR', {
       day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC'
     }).format(new Date(`${compra.fecha_funcion}T00:00:00Z`));
+  }
+
+  fechaVista(pelicula: PeliculaVista): string {
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC'
+    }).format(new Date(`${pelicula.fecha_funcion}T00:00:00Z`));
+  }
+
+  estrellas(valor: number): string {
+    return '★'.repeat(valor) + '☆'.repeat(5 - valor);
   }
 }

@@ -21,6 +21,7 @@ export class ButacasService {
   private fechaFuncion = '';
   private sesionToken = '';
   private sesionHash = '';
+  private precioBaseCentavos = PRECIO_BUTACA_CENTAVOS;
   private channel?: RealtimeChannel;
   private broadcast?: BroadcastChannel;
 
@@ -47,13 +48,14 @@ export class ButacasService {
     }
   }
 
-  async conectar(funcionId: string, fechaFuncion: string): Promise<void> {
-    if (this.funcionId === funcionId && this.fechaFuncion === fechaFuncion) return;
+  async conectar(funcionId: string, fechaFuncion: string, precioBaseCentavos = PRECIO_BUTACA_CENTAVOS): Promise<void> {
+    if (this.funcionId === funcionId && this.fechaFuncion === fechaFuncion && this.precioBaseCentavos === precioBaseCentavos) return;
     if (this.funcionId && this.seleccionadasSignal().length) await this.sincronizar([]);
 
     this.desconectarCanal();
     this.funcionId = funcionId;
     this.fechaFuncion = fechaFuncion;
+    this.precioBaseCentavos = precioBaseCentavos;
     this.sesionToken = this.obtenerSesionToken();
     this.sesionHash = await this.calcularHash(this.sesionToken);
     this.seleccionadasSignal.set([]);
@@ -274,7 +276,7 @@ export class ButacasService {
       tipo,
       estado: 'reservada',
       sesion_hash: this.sesionHash,
-      precio_centavos: PRECIO_BUTACA_CENTAVOS + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0),
+      precio_centavos: this.precioBaseCentavos + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0),
       expira_en: expiraEn
     };
   }
@@ -289,7 +291,7 @@ export class ButacasService {
       tipo,
       estado: 'ocupada',
       sesion_hash: 'sistema-demo',
-      precio_centavos: PRECIO_BUTACA_CENTAVOS + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0),
+      precio_centavos: this.precioBaseCentavos + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0),
       expira_en: null
     };
   }

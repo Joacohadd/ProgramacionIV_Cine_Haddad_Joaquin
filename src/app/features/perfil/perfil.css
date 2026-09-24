@@ -20,7 +20,47 @@ dd { margin: .35rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
 .balance strong { display: block; font-family: var(--display); font-size: 3rem; letter-spacing: -.06em; font-weight: 500; margin: .25rem 0; }
 .balance p { font-size: .76rem; color: #bdc8bb; max-width: 330px; }
 .demo-profile-note { margin-top: 2rem; color: #5b6557; font-size: .78rem; }
+.loyalty { margin-top: 5rem; }
+.loyalty > header { display: grid; grid-template-columns: 1fr 420px; gap: 3rem; align-items: end; padding-bottom: 1.5rem; border-bottom: 1px solid #a4aa9e; }
+.loyalty > header .eyebrow { color: var(--coral-dark); }
+.loyalty > header h2 { max-width: 800px; margin: .5rem 0 0; font: 600 4rem/.9 var(--display); letter-spacing: -.06em; }
+.loyalty > header h2 em { color: var(--coral-dark); font-weight: 500; }
+.loyalty > header p { margin: 0; color: #60695d; font-size: .8rem; line-height: 1.6; }
+.reward-catalog { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 1.5rem; background: #a4aa9e; border: 1px solid #a4aa9e; }
+.reward-card { display: flex; flex-direction: column; min-height: 310px; padding: 1.7rem; background: #f8f5e9; }
+.reward-card > span, .history-heading > span, .redemption-row span { color: var(--coral-dark); font-size: .58rem; font-weight: 800; letter-spacing: .13em; }
+.reward-card h3 { margin: 1.5rem 0 .5rem; font: 600 2rem/1 var(--display); letter-spacing: -.04em; }
+.reward-card > p { color: #626b5f; font-size: .75rem; line-height: 1.55; }
+.reward-card > small { color: #70786d; }
+.reward-card > div { display: flex; justify-content: space-between; align-items: end; gap: 1rem; margin-top: auto; padding-top: 1.5rem; border-top: 1px solid #c2c7bc; }
+.reward-card > div strong { color: var(--coral-dark); font: 600 1.8rem/1 var(--display); }
+.reward-card > div strong small { font: 700 .6rem var(--body); letter-spacing: .08em; text-transform: uppercase; }
+.reward-card button { border: 0; padding: .75rem 1rem; background: var(--ink); color: var(--cream); font-size: .65rem; font-weight: 700; }
+.reward-card button:disabled { background: #c5c9bf; color: #687164; }
+.redemption-history { margin-top: 2rem; border: 1px solid #a4aa9e; }
+.history-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5rem; background: #243a29; color: var(--cream); }
+.history-heading h3 { margin: 0; font: 600 2rem/1 var(--display); }
+.redemption-row { display: grid; grid-template-columns: 1fr 220px 150px; gap: 2rem; align-items: center; padding: 1.25rem 1.5rem; border-top: 1px solid #c2c7bc; }
+.redemption-row > div { display: grid; gap: .3rem; }
+.redemption-row small { color: #70786d; font-size: .65rem; }
+.redemption-row code { font-weight: 800; color: var(--coral-dark); }
+.purchase-total small { color: #4f6a50; font-size: .6rem; font-weight: 700; }
 .purchases { margin-top: 5rem; }
+.watched { margin-top: 5rem; }
+.watched > header { display: grid; grid-template-columns: 1fr 420px; gap: 3rem; align-items: end; padding-bottom: 1.5rem; border-bottom: 1px solid #a4aa9e; }
+.watched > header .eyebrow { color: var(--coral-dark); }
+.watched > header h2 { margin: .5rem 0 0; font-family: var(--display); font-size: 4rem; line-height: .9; letter-spacing: -.06em; }
+.watched > header p { margin: 0; color: #60695d; font-size: .8rem; line-height: 1.6; }
+.watched-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: #a4aa9e; border: 1px solid #a4aa9e; margin-top: 1.5rem; }
+.watched-card { display: grid; grid-template-columns: 120px 1fr; gap: 1.2rem; min-height: 190px; padding: 1rem; background: #f8f5e9; }
+.watched-card img { width: 120px; height: 170px; object-fit: cover; }
+.watched-card > div { display: flex; flex-direction: column; align-items: start; }
+.watched-card span { color: var(--coral-dark); font-size: .56rem; font-weight: 800; letter-spacing: .1em; }
+.watched-card h3 { margin: .8rem 0 .3rem; font: 600 1.45rem/1 var(--display); }
+.watched-card h3 a { color: inherit; text-decoration: none; }
+.watched-card p { margin: 0; color: #687164; font-size: .67rem; }
+.own-rating { margin-top: auto; color: var(--coral-dark); letter-spacing: .1em; }
+.rate-link { margin-top: auto; color: var(--coral-dark); font-size: .63rem; font-weight: 700; }
 .purchases > header { display: grid; grid-template-columns: 1fr 420px; gap: 3rem; align-items: end; padding-bottom: 1.5rem; border-bottom: 1px solid #a4aa9e; }
 .purchases > header .eyebrow { color: var(--coral-dark); }
 .purchases > header h2 { margin: .5rem 0 0; font-family: var(--display); font-size: 4rem; line-height: .9; letter-spacing: -.06em; }

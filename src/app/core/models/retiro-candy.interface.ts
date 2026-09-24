@@ -8,8 +8,10 @@ export interface RetiroCandy {
   fecha_funcion: string;
   hora_inicio: string;
   sala_nombre: string;
+  butacas: string[];
   productos: ProductoCompra[];
   combos: ComboCompra[];
+  ingreso_validado_en: string | null;
   candy_retirado_en: string | null;
 }
 

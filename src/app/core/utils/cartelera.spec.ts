@@ -12,7 +12,7 @@ describe('cartelera pública', () => {
 
   it('encuentra un género múltiple y combina género con texto', () => {
     const misterio = filtrarYOrdenarCartelera(PELICULAS_DEMO, '', 'Misterio');
-    expect(misterio.map(p => p.titulo)).toEqual(['La última luz', 'El ruido del agua']);
+    expect(misterio.map(p => p.titulo)).toEqual(['La última luz', 'El ruido del agua', 'Después del eclipse']);
     const combinado = filtrarYOrdenarCartelera(PELICULAS_DEMO, 'agua', 'Misterio');
     expect(combinado.map(p => p.titulo)).toEqual(['El ruido del agua']);
     expect(filtrarYOrdenarCartelera(PELICULAS_DEMO, 'agua', 'Romance')).toEqual([]);

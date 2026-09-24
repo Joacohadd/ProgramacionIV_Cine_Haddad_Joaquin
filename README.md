@@ -74,6 +74,38 @@ El retiro del candy y el acceso a sala se registran por separado para que una ac
 - Validación de edad y disponibilidad al confirmar la compra.
 - Descuento registrado en la compra, el historial y la entrada PDF.
 
+### 4.9 Programa de fidelización
+
+- Acreditación de 1 punto por cada peso del total final de una compra registrada.
+- Catálogo de recompensas por entradas gratuitas y productos del candy bar.
+- Alta, edición, publicación y configuración del costo en puntos desde administración.
+- Canje seguro con descuento de puntos y código personal.
+- Saldo e historial de canjes disponibles en el perfil.
+- Reversión de los puntos acreditados cuando se cancela una compra.
+
+### 4.10 Próximos estrenos y preventa
+
+- Sección separada de películas que todavía no se estrenaron.
+- Alertas personales para avisar cuando comienza la venta.
+- Preventa habilitable desde administración, disponible siete días antes del estreno.
+- Precio especial configurable durante la preventa y regreso automático al precio normal.
+- Historial visual "Mis películas" con póster, fecha de función y calificación propia.
+
+### 4.11 Administración, validación y auditoría
+
+- Acceso separado para administradores y empleados. El administrador puede habilitar como empleado una cuenta ya registrada.
+- Validación de entrada y entrega de candy mediante cámara QR o código impreso ingresado manualmente.
+- Cada operación se registra una sola vez; ingreso y candy se controlan por separado.
+- Actividad administrativa con usuario, acción, fecha y hora para funciones, precios, roles y validaciones.
+
+### 4.12 Reportes
+
+- Facturación, compras y entradas vendidas para la fecha elegida, sin contar compras canceladas.
+- Detalle diario de ventas exportable a PDF y Excel.
+- Gráfico de películas más vistas por semana o por mes, según la fecha de función.
+- Producto del candy bar más vendido, incluidos los productos de combos.
+- Acceso propio en la barra de navegación, exclusivo para administradores.
+
 ## Ejecutar
 
 ```bash
@@ -83,7 +115,7 @@ npm start
 
 La aplicación queda disponible en `http://localhost:4200`.
 
-Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar las migraciones pendientes en orden hasta `supabase/migrations/20260923_cupones.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
+Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar las migraciones pendientes en orden hasta `supabase/migrations/20260927_reportes.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
 
 ## Verificar
 

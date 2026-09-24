@@ -5,6 +5,7 @@ import { ButacasService } from '../../core/services/butacas.service';
 import { ProgramacionService } from '../../core/services/programacion.service';
 import { buscarButaca, generarMapaButacas, PRECIO_BUTACA_CENTAVOS, RECARGO_VIP_CENTAVOS } from '../../core/utils/butacas';
 import { proximasFechasFuncion } from '../../core/utils/planificacion';
+import { precioBaseVigente, preventaActiva, ventaHabilitada } from '../../core/utils/estrenos';
 import { ButacaComponent } from '../../shared/components/butaca/butaca';
 
 @Component({
@@ -30,11 +31,19 @@ export class SeleccionButacas {
   });
   readonly fechas = computed(() => {
     const funcion = this.funcion();
-    return funcion ? proximasFechasFuncion(funcion, this.hoy, 8) : [];
+    return funcion && ventaHabilitada(funcion, this.hoy) ? proximasFechasFuncion(funcion, this.hoy, 8) : [];
+  });
+  readonly preventaActiva = computed(() => {
+    const funcion = this.funcion();
+    return funcion ? preventaActiva(funcion, this.hoy) : false;
+  });
+  readonly precioBase = computed(() => {
+    const funcion = this.funcion();
+    return funcion ? precioBaseVigente(funcion, this.hoy, PRECIO_BUTACA_CENTAVOS) : PRECIO_BUTACA_CENTAVOS;
   });
   readonly mapa = computed(() => {
     const sala = this.sala();
-    return sala ? generarMapaButacas(sala) : [];
+    return sala ? generarMapaButacas(sala, this.precioBase()) : [];
   });
   readonly seleccionadasDetalle = computed(() => this.butacas.seleccionadas()
     .map(codigo => buscarButaca(this.mapa(), codigo))
@@ -43,7 +52,6 @@ export class SeleccionButacas {
   readonly totalCentavos = computed(() => this.seleccionadasDetalle()
     .reduce((total, butaca) => total + butaca.precio_centavos, 0));
   readonly cantidadTexto = computed(() => String(this.butacas.cantidad()).padStart(2, '0'));
-  readonly precioBase = PRECIO_BUTACA_CENTAVOS;
   readonly recargoVip = RECARGO_VIP_CENTAVOS;
 
   constructor() {
@@ -55,7 +63,7 @@ export class SeleccionButacas {
       const solicitada = this.fecha();
       const fecha = fechas.includes(actual) ? actual : solicitada && fechas.includes(solicitada) ? solicitada : fechas[0];
       if (fecha !== actual) this.fechaSeleccionada.set(fecha);
-      void this.butacas.conectar(funcion.id, fecha);
+      void this.butacas.conectar(funcion.id, fecha, this.precioBase());
     });
     this.destroyRef.onDestroy(() => this.butacas.desconectar());
   }

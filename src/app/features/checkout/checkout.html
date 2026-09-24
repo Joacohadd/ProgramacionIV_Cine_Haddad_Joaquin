@@ -2,7 +2,7 @@
   @if (compraFinalizada(); as compra) {
     <div class="success-layout">
       <section class="success-copy">
-        <span class="eyebrow">4.8 / COMPRA CONFIRMADA</span>
+        <span class="eyebrow">4.9 / COMPRA CONFIRMADA</span>
         <h1>Tu entrada cruza <em>el umbral.</em></h1>
         <p>Guardá el PDF. El mismo código QR sirve para ingresar a la sala y retirar el pedido del candy.</p>
         <dl class="success-details">
@@ -18,6 +18,7 @@
             <div class="success-candy"><dt>Candy</dt><dd>@for (producto of compra.productos; track producto.producto_id) { <span>{{ producto.cantidad }}× {{ producto.nombre }}</span> }</dd></div>
           }
           @if (compra.cupon_codigo) { <div><dt>Cupón aplicado</dt><dd>{{ compra.cupon_codigo }} · {{ compra.cupon_porcentaje }}% (− {{ precio(compra.descuento_centavos) }})</dd></div> }
+          @if (compra.puntos_ganados) { <div><dt>Puntos ganados</dt><dd>+{{ compra.puntos_ganados }} puntos</dd></div> }
           <div><dt>Total</dt><dd>{{ precio(compra.total_centavos) }}</dd></div>
         </dl>
         @if (compra.aviso_adulto) {
@@ -43,7 +44,7 @@
       <a class="back-link" [routerLink]="['/funcion', funcionActual.id, 'butacas']" [queryParams]="{ fecha: fecha() }">← Volver a las butacas</a>
       <header class="checkout-heading">
         <div>
-          <span class="eyebrow">4.8 / COMPRA Y BENEFICIOS</span>
+          <span class="eyebrow">4.9 / COMPRA Y FIDELIZACIÓN</span>
           <h1>Último paso antes de <em>la función.</em></h1>
         </div>
         <p>Revisá la reserva, completá los datos del comprador y elegí cómo abonar el saldo.</p>

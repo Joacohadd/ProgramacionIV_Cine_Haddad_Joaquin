@@ -20,18 +20,26 @@ export class Login {
     try {
       const { email, password } = this.form.getRawValue();
       await this.auth.signIn(email, password);
-      void this.router.navigate(['/perfil']);
+      const rol = this.auth.currentUserData()?.rol;
+      void this.router.navigate([rol === 'admin' ? '/admin/peliculas' : rol === 'empleado' ? '/personal/validacion' : '/perfil']);
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'No se pudo ingresar.'); }
     finally { this.enviando.set(false); }
   }
 
   entrarDemo(): void {
-    if (this.auth.ingresarDemo()) void this.router.navigate(['/perfil']);
+    if (this.auth.ingresarDemo()) {
+      void this.router.navigate([this.auth.currentUserData()?.rol === 'empleado' ? '/personal/validacion' : '/perfil']);
+    }
     else this.error.set('Primero creá un perfil de muestra.');
   }
 
   entrarAdminDemo(): void {
     this.auth.ingresarAdminDemo();
     void this.router.navigate(['/admin/peliculas']);
+  }
+
+  entrarEmpleadoDemo(): void {
+    this.auth.ingresarEmpleadoDemo();
+    void this.router.navigate(['/personal/validacion']);
   }
 }

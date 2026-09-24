@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsearCodigoQr } from './codigo-qr';
+import { parsearCodigoManual, parsearCodigoQr } from './codigo-qr';
 
 describe('código QR de compra', () => {
   it('extrae el código y token del contenido generado en la entrada', () => {
@@ -11,5 +11,10 @@ describe('código QR de compra', () => {
   it('rechaza contenidos incompletos o ajenos al cine', () => {
     expect(parsearCodigoQr('UMB-AB12CD34EF')).toBeNull();
     expect(parsearCodigoQr('OTRO|UMB-AB12CD34EF|550e8400-e29b-41d4-a716-446655440000')).toBeNull();
+  });
+
+  it('permite consultar el código impreso sin el token cuando falla el lector', () => {
+    expect(parsearCodigoManual(' umb-ab12cd34ef ')).toBe('UMB-AB12CD34EF');
+    expect(parsearCodigoManual('UMB-AB12CD34EF|otro')).toBeNull();
   });
 });
