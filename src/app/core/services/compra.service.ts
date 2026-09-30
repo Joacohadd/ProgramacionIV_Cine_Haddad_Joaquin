@@ -30,6 +30,8 @@ export class CompraService {
   private readonly combosCandy = inject(ComboCandyService);
   private readonly cupones = inject(CuponService);
   private readonly comprasSignal = signal<Compra[]>([]);
+  private cargaComprasId = 0;
+  private comprasUsuarioId: string | null = null;
 
   readonly compras = computed(() => this.comprasSignal());
   readonly cargando = signal(false);
@@ -166,8 +168,13 @@ export class CompraService {
 
   async cargarCompras(): Promise<void> {
     const perfil = this.auth.currentUserData();
-    if (!perfil) {
+    const cargaId = ++this.cargaComprasId;
+    if (this.comprasUsuarioId !== (perfil?.id ?? null)) {
+      this.comprasUsuarioId = perfil?.id ?? null;
       this.comprasSignal.set([]);
+    }
+    if (!perfil) {
+      this.cargando.set(false);
       return;
     }
 
@@ -176,19 +183,35 @@ export class CompraService {
       this.comprasSignal.set(this.leerComprasDemo()
         .filter(compra => compra.usuario_id === perfil.id)
         .sort((a, b) => b.creada_en.localeCompare(a.creada_en)));
+      this.cargando.set(false);
       return;
     }
 
     this.cargando.set(true);
     this.error.set(null);
-    const { data, error } = await client.from('compras_detalle').select('*').order('creada_en', { ascending: false });
-    if (error) {
-      console.error('No se pudieron cargar las compras:', error.message);
-      this.error.set('No se pudieron cargar tus entradas. Revisá la migración del punto 4.6.');
-    } else {
+    const controller = new AbortController();
+    let agotado = false;
+    const timeout = setTimeout(() => {
+      agotado = true;
+      controller.abort();
+    }, 15_000);
+    try {
+      const { data, error } = await client.from('compras_detalle').select('*')
+        .eq('usuario_id', perfil.id).order('creada_en', { ascending: false })
+        .abortSignal(controller.signal);
+      if (error) throw error;
+      if (cargaId !== this.cargaComprasId) return;
       this.comprasSignal.set((data ?? []).map(item => this.normalizarCompra(item as unknown as Compra)));
+    } catch (error) {
+      if (cargaId !== this.cargaComprasId) return;
+      console.error('No se pudieron cargar las compras:', error);
+      this.error.set(agotado
+        ? 'La carga de compras tardó demasiado. Intentá de nuevo.'
+        : 'No se pudieron cargar tus compras. Intentá de nuevo.');
+    } finally {
+      clearTimeout(timeout);
+      if (cargaId === this.cargaComprasId) this.cargando.set(false);
     }
-    this.cargando.set(false);
   }
 
   async cancelar(compra: Compra): Promise<void> {
@@ -226,7 +249,7 @@ export class CompraService {
   }
 
   async generarQrDataUrl(compra: Compra): Promise<string> {
-    const QRCode = await import('qrcode');
+    const { default: QRCode } = await import('qrcode');
     return QRCode.toDataURL(this.contenidoQr(compra), {
       errorCorrectionLevel: 'M', margin: 1, width: 320,
       color: { dark: '#111710', light: '#f8f5e9' }

@@ -80,6 +80,7 @@ dd { margin: .35rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
 .purchase-actions { display: grid; gap: .4rem; justify-items: stretch; }
 .purchase-actions button { border: 0; padding: .55rem .75rem; font-size: .63rem; font-weight: 700; letter-spacing: .05em; }
 .ticket-action { background: var(--ink); color: var(--cream); }
+.purchase-retry { margin: .5rem 0 1rem; border: 0; padding: .7rem 1rem; background: var(--ink); color: var(--cream); font: inherit; font-size: .7rem; font-weight: 700; cursor: pointer; }
 .cancel-action { background: transparent; color: var(--coral-dark); text-decoration: underline; }
 .purchase-actions small { color: #737c70; font-size: .62rem; }
 .purchase-empty { padding: 3rem 0; color: #657060; }

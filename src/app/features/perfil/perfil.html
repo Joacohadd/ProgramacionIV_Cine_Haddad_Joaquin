@@ -72,7 +72,10 @@
 
       <section class="purchases" aria-labelledby="purchases-title">
         <header><div><span class="eyebrow">05 / ENTRADAS Y CANDY</span><h2 id="purchases-title">Mis compras</h2></div><p>Las entradas pueden cancelarse hasta 2 horas antes de la función. Los pedidos de solo candy se retiran con el QR.</p></header>
-        @if (compras.error()) { <p class="form-error" role="alert">{{ compras.error() }}</p> }
+        @if (compras.error()) {
+          <p class="form-error" role="alert">{{ compras.error() }}</p>
+          <button type="button" class="purchase-retry" (click)="compras.cargarCompras()">Reintentar carga de compras</button>
+        }
         @if (compras.mensaje()) { <p class="form-success" role="status">{{ compras.mensaje() }}</p> }
         @if (errorDocumento()) { <p class="form-error" role="alert">{{ errorDocumento() }}</p> }
         @if (compras.cargando()) {
