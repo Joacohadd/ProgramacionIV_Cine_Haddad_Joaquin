@@ -19,6 +19,8 @@
 .account-note { border: 1px solid #4f5d4c; color: #b9c4b5; }
 .credit-covered { background: #273f2b; color: #c8dec8; }
 .coupon-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.reward-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; margin-bottom: 1.8rem; }
+.reward-options .section-note, .reward-options .form-error { grid-column: 1 / -1; margin-bottom: 0; }
 .coupon-option { display: grid; grid-template-columns: auto 1fr; gap: .8rem; align-items: start; min-height: 105px; padding: 1rem; border: 1px solid #596457; background: #1c261d; cursor: pointer; }
 .coupon-option.selected { border-color: var(--coral); background: #2b2c22; }
 .coupon-option input { margin-top: .2rem; accent-color: var(--coral); }
@@ -100,6 +102,9 @@
 .success-details dd { margin: .3rem 0 0; font-weight: 700; }
 .success-details dd span + span::before { content: ' · '; }
 .success-details .success-candy { grid-column: 1 / -1; }
+.success-details .success-payment { grid-column: 1 / -1; padding: 1rem; background: var(--coral); color: var(--ink); }
+.success-details .success-payment dt { color: var(--ink); }
+.success-details .success-payment dd { font-family: var(--display); font-size: 2rem; line-height: 1; }
 .adult-warning { max-width: 680px; padding: 1rem; background: #3c3420; color: #f2dca7 !important; }
 .success-actions { display: flex; gap: .8rem; margin-top: 1.5rem; }
 .qr-ticket { display: grid; justify-items: center; padding: 2rem; background: var(--paper); color: var(--ink); box-shadow: 18px 18px 0 var(--coral); }

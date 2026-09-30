@@ -9,6 +9,7 @@ import { ButacasService } from '../../core/services/butacas.service';
 import { CompraService } from '../../core/services/compra.service';
 import { ComboCandyService } from '../../core/services/combo-candy.service';
 import { CuponService } from '../../core/services/cupon.service';
+import { FidelizacionService } from '../../core/services/fidelizacion.service';
 import { PeliculaService } from '../../core/services/pelicula.service';
 import { ProgramacionService } from '../../core/services/programacion.service';
 import { ProductoService } from '../../core/services/producto.service';
@@ -18,6 +19,7 @@ import { cumpleRestriccionEdad, edadMinima } from '../../core/utils/compras';
 import { armarCombosCompra, calcularEntradasFueraDeCombos, calcularTotalCombos } from '../../core/utils/combo-compra';
 import { calcularDescuento } from '../../core/utils/cupones';
 import { precioBaseVigente, ventaHabilitada } from '../../core/utils/estrenos';
+import { descuentoCanjes, productosConCanjes } from '../../core/utils/aplicacion-canjes';
 
 @Component({
   selector: 'app-checkout',
@@ -35,6 +37,7 @@ export class Checkout {
   readonly candy = inject(ProductoService);
   readonly combos = inject(ComboCandyService);
   readonly cupones = inject(CuponService);
+  readonly fidelizacion = inject(FidelizacionService);
   private readonly peliculas = inject(PeliculaService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -45,6 +48,7 @@ export class Checkout {
   readonly errorDocumento = signal<string | null>(null);
   readonly cantidadesCandy = signal<Record<string, number>>({});
   readonly cantidadesCombos = signal<Record<string, number>>({});
+  readonly codigosCanjes = signal<string[]>([]);
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     fecha_nacimiento: ['', Validators.required],
@@ -97,18 +101,30 @@ export class Checkout {
       precio_centavos: butaca.precio_centavos
     })));
   readonly productosSeleccionados = computed(() => armarProductosCompra(this.candy.publicados(), this.cantidadesCandy()));
+  readonly canjesDisponibles = computed(() => this.fidelizacion.canjes().filter(canje => !canje.entregado_en));
+  readonly canjesSeleccionados = computed(() => this.canjesDisponibles().filter(canje => this.codigosCanjes().includes(canje.codigo)));
+  readonly aplicacionCanjes = computed(() => {
+    try {
+      const canjes = this.canjesSeleccionados();
+      return { productos: productosConCanjes(this.productosSeleccionados(), canjes, this.candy.publicados()),
+        descuento: descuentoCanjes(canjes, this.entradas(), this.combosSeleccionados(), this.candy.publicados()), error: null as string | null };
+    } catch (error) {
+      return { productos: this.productosSeleccionados(), descuento: 0,
+        error: error instanceof Error ? error.message : 'Revisá los premios seleccionados.' };
+    }
+  });
   readonly combosSeleccionados = computed(() => armarCombosCompra(this.combos.publicados(), this.cantidadesCombos(), this.entradas().length));
   readonly cantidadCombos = computed(() => this.combosSeleccionados().reduce((total, combo) => total + combo.cantidad, 0));
   readonly subtotalEntradas = computed(() => calcularEntradasFueraDeCombos(this.entradas(), this.combosSeleccionados()));
   readonly subtotalCombos = computed(() => calcularTotalCombos(this.combosSeleccionados()));
-  readonly subtotalCandy = computed(() => calcularTotalProductos(this.productosSeleccionados()));
+  readonly subtotalCandy = computed(() => calcularTotalProductos(this.aplicacionCanjes().productos));
   readonly subtotalCompra = computed(() => this.subtotalEntradas() + this.subtotalCombos() + this.subtotalCandy());
   readonly cuponElegido = computed(() => this.cupones.disponibles().find(cupon => cupon.id === this.cuponElegidoId()));
   readonly descuentoCentavos = computed(() => {
     const cupon = this.cuponElegido();
     return cupon ? calcularDescuento(this.subtotalCompra(), cupon.porcentaje) : 0;
   });
-  readonly totalCentavos = computed(() => this.subtotalCompra() - this.descuentoCentavos());
+  readonly totalCentavos = computed(() => this.subtotalCompra() - this.descuentoCentavos() - this.aplicacionCanjes().descuento);
   readonly creditoDisponible = computed(() => this.auth.currentUserData()?.credito_centavos ?? 0);
   readonly creditoAplicado = computed(() => this.usarCredito()
     ? Math.min(this.creditoDisponible(), this.totalCentavos())
@@ -136,8 +152,10 @@ export class Checkout {
       const perfil = this.auth.currentUserData();
       if (perfil) {
         this.form.patchValue({ email: perfil.email, fecha_nacimiento: perfil.fecha_nacimiento }, { emitEvent: true });
+        void this.fidelizacion.cargarPerfil();
       } else {
         this.form.controls.cupon_id.setValue('');
+        this.codigosCanjes.set([]);
       }
       void this.cupones.cargarDisponibles();
     });
@@ -148,7 +166,7 @@ export class Checkout {
     this.form.markAllAsTouched();
     const funcion = this.funcion();
     const pelicula = this.pelicula();
-    if (this.form.invalid || !funcion || !pelicula || !this.fechaProgramada() || !this.ventaHabilitada() || !this.entradas().length) return;
+    if (this.form.invalid || !funcion || !pelicula || !this.fechaProgramada() || !this.ventaHabilitada() || !this.entradas().length || this.aplicacionCanjes().error) return;
     if (!this.edadPermitida()) {
       this.compras.error.set(`Necesitás tener al menos ${this.edadRequerida()} años en la fecha de la función.`);
       return;
@@ -161,7 +179,8 @@ export class Checkout {
         fecha_nacimiento: valores.fecha_nacimiento,
         usar_credito: valores.usar_credito,
         medio_pago: valores.medio_pago
-      }, funcion, pelicula, this.fecha(), this.entradas(), this.productosSeleccionados(), this.combosSeleccionados(), this.cuponElegido()?.id ?? null);
+      }, funcion, pelicula, this.fecha(), this.entradas(), this.aplicacionCanjes().productos, this.combosSeleccionados(), this.cuponElegido()?.id ?? null, this.codigosCanjes());
+      await this.fidelizacion.cargarPerfil();
       this.compraFinalizada.set(resultado);
       this.qrDataUrl.set(await this.compras.generarQrDataUrl(resultado));
       await this.descargar(resultado);
@@ -183,6 +202,11 @@ export class Checkout {
 
   cantidadProducto(productoId: string): number {
     return this.cantidadesCandy()[productoId] ?? 0;
+  }
+
+  cambiarCanje(codigo: string, marcado: boolean): void {
+    this.codigosCanjes.update(codigos => marcado ? [...codigos, codigo] : codigos.filter(item => item !== codigo));
+    if (marcado) this.form.controls.cupon_id.setValue('');
   }
 
   cambiarCantidad(productoId: string, diferencia: number): void {

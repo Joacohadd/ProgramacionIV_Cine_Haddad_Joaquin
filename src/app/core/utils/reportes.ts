@@ -39,13 +39,15 @@ export function construirReporteDemo(compras: Compra[], dia: string, periodo: Pe
   const productos = new Map<string, { nombre: string; cantidad: number }>();
 
   for (const compra of pagadas) {
-    if (compra.fecha_funcion >= desde && compra.fecha_funcion <= hasta) {
+    if (compra.fecha_funcion && compra.fecha_funcion >= desde && compra.fecha_funcion <= hasta) {
       const anterior = peliculas.get(compra.pelicula_id);
       peliculas.set(compra.pelicula_id, {
         titulo: compra.pelicula_titulo,
         entradas: (anterior?.entradas ?? 0) + compra.entradas.length
       });
     }
+  }
+  for (const compra of delDia) {
     for (const producto of compra.productos ?? []) {
       const anterior = productos.get(producto.producto_id);
       productos.set(producto.producto_id, {
@@ -64,7 +66,7 @@ export function construirReporteDemo(compras: Compra[], dia: string, periodo: Pe
     entradas_vendidas: delDia.reduce((total, compra) => total + compra.entradas.length, 0),
     compras: delDia.length,
     ventas: delDia.map(compra => ({
-      codigo: compra.codigo, creada_en: compra.creada_en, pelicula: compra.pelicula_titulo,
+      codigo: compra.codigo, creada_en: compra.creada_en, pelicula: compra.fecha_funcion ? compra.pelicula_titulo : 'Solo candy',
       entradas: compra.entradas.length, total_centavos: Number(compra.total_centavos)
     })),
     peliculas: [...peliculas.entries()]

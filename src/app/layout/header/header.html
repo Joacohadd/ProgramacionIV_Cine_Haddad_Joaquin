@@ -17,12 +17,14 @@
           <a routerLink="/admin/combos" routerLinkActive="active" (click)="cerrarNavegacion()">Combos</a>
           <a routerLink="/admin/cupones" routerLinkActive="active" (click)="cerrarNavegacion()">Cupones</a>
           <a routerLink="/admin/recompensas" routerLinkActive="active" (click)="cerrarNavegacion()">Recompensas</a>
+          <a routerLink="/personal/canjes-puntos" routerLinkActive="active" (click)="cerrarNavegacion()">Canjes de puntos</a>
           <a routerLink="/admin/actividad" routerLinkActive="active" (click)="cerrarNavegacion()">Actividad</a>
           <a routerLink="/personal/validacion" routerLinkActive="active" (click)="cerrarNavegacion()">Validar entradas</a>
         </div>
       </div>
       <a *appRole="'admin'" routerLink="/admin/reportes" routerLinkActive="active" (click)="cerrarNavegacion()">Reportes</a>
       <a *appRole="'empleado'" routerLink="/personal/validacion" routerLinkActive="active" (click)="cerrarNavegacion()">Validar entradas</a>
+      <a *appRole="'empleado'" routerLink="/personal/canjes-puntos" routerLinkActive="active" (click)="cerrarNavegacion()">Canjes de puntos</a>
       @if (auth.currentUserData()) {
         <a routerLink="/perfil" routerLinkActive="active" (click)="cerrarNavegacion()">Mi perfil</a>
         <button type="button" class="nav-text-button" (click)="salir()">Salir</button>

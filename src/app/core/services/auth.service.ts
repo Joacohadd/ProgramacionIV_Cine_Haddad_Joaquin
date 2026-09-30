@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Session, User } from '@supabase/supabase-js';
 import { DatosRegistro, Perfil } from '../models/perfil.interface';
 import { SupabaseService } from './supabase.service';
+import { mensajeErrorCredenciales } from '../utils/auth-errors';
 
 const DEMO_PERFIL_KEY = 'umbral-demo-perfil';
 
@@ -101,7 +102,7 @@ export class AuthService {
         color_ojos: datos.color_ojos, dias_vacaciones: datos.dias_vacaciones
       } }
     });
-    if (error) throw error;
+    if (error) throw new Error(mensajeErrorCredenciales(error, 'registrar'));
     if (data.user?.identities?.length === 0) throw new Error('Ese correo ya está registrado.');
     if (data.session?.user) await this.cargarPerfil(data.session.user.id);
     return { pendingConfirmation: !data.session };
@@ -111,7 +112,7 @@ export class AuthService {
     const client = this.supabase.client;
     if (!client) throw new Error('El acceso con contraseña requiere configurar Supabase. Usá la cuenta de muestra.');
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) throw new Error(mensajeErrorCredenciales(error, 'ingresar'));
     if (data.user) await this.cargarPerfil(data.user.id);
   }
 

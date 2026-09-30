@@ -36,6 +36,8 @@ export class ActividadAdmin implements OnInit {
       precio_modificado: 'Precio modificado',
       ingreso_validado: 'Ingreso validado',
       candy_entregado: 'Candy entregado',
+      canje_validado: 'Canje de puntos validado',
+      canje_aplicado: 'Premio de puntos aplicado a una compra',
       rol_modificado: 'Rol de usuario modificado'
     };
     return nombres[registro.accion] ?? registro.accion;

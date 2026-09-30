@@ -90,6 +90,8 @@
       @if (resenasServicio.error(); as error) {
         <p class="reviews-state error" role="alert">{{ error }}</p>
       }
+      @if (formError()) { <p class="reviews-state error" role="alert">{{ formError() }}</p> }
+      @if (formMensaje()) { <p class="reviews-state" role="status">{{ formMensaje() }}</p> }
       @if (!resenasServicio.cargando() && !resenasServicio.error()) {
         @if (resenas().length) {
           <div class="reviews-list">
@@ -97,7 +99,12 @@
               <article class="review-card">
                 <div class="review-top">
                   <div class="review-author"><strong>{{ resena.autor_nombre }}</strong><span>{{ fechaResena(resena.creado_en) }}</span></div>
-                  <app-calificacion-estrellas [valor]="resena.estrellas" />
+                  <div class="review-actions">
+                    <app-calificacion-estrellas [valor]="resena.estrellas" />
+                    @if (auth.currentUserData()?.id === resena.usuario_id) {
+                      <button class="review-delete" type="button" [disabled]="!!borrandoResena()" [attr.aria-label]="'Borrar mi reseña de ' + resena.autor_nombre" title="Borrar reseña" (click)="borrarResena(resena)">🗑</button>
+                    }
+                  </div>
                 </div>
                 <p>{{ resena.comentario }}</p>
               </article>
@@ -131,8 +138,6 @@
             }
           </div>
 
-          @if (formError()) { <p class="form-error" role="alert">{{ formError() }}</p> }
-          @if (formMensaje()) { <p class="form-success" role="status">{{ formMensaje() }}</p> }
           <button class="button-primary" type="submit" [disabled]="enviandoResena()">{{ enviandoResena() ? 'Publicando...' : 'Publicar reseña ↗' }}</button>
         </form>
       } @else {

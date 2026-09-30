@@ -2,7 +2,7 @@
   <a class="back-link" routerLink="/">← Volver a cartelera</a>
   <header class="candy-heading">
     <div><span class="eyebrow">UMBRAL / CANDY BAR</span><h1>Algo rico para <em>tu función.</em></h1></div>
-    <div class="candy-intro"><p>Explorá nuestro candy bar por categoría y elegí qué acompañará tu próxima función.</p><a *appRole="'admin'" class="button-outline" routerLink="/admin/productos">Administrar productos ↗</a></div>
+    <div class="candy-intro"><p>Elegí tus productos y compralos incluso si no tenés entrada. Retirá el pedido con el QR.</p><a *appRole="'admin'" class="button-outline" routerLink="/admin/productos">Administrar productos ↗</a></div>
   </header>
   @if (servicio.cargando()) {
     <p class="catalog-message" role="status">Cargando los productos...</p>
@@ -13,11 +13,75 @@
       <section class="category-group" [attr.aria-labelledby]="'category-' + grupo.id">
         <header class="category-heading"><h2 [id]="'category-' + grupo.id">{{ grupo.nombre }}</h2><span>{{ grupo.productos.length }} {{ grupo.productos.length === 1 ? 'producto' : 'productos' }}</span></header>
         <div class="product-grid">
-          @for (producto of grupo.productos; track producto.id) { <app-producto-card [producto]="producto" [categoria]="grupo.nombre" /> }
+          @for (producto of grupo.productos; track producto.id) {
+            <div class="candy-product"><app-producto-card [producto]="producto" [categoria]="grupo.nombre" />
+              <div class="candy-quantity" [attr.aria-label]="'Cantidad de ' + producto.nombre">
+                <button type="button" (click)="cambiarCantidad(producto.id, -1)" [disabled]="cantidad(producto.id) === 0" [attr.aria-label]="'Quitar ' + producto.nombre">−</button>
+                <output>{{ cantidad(producto.id) }}</output>
+                <button type="button" (click)="cambiarCantidad(producto.id, 1)" [disabled]="cantidad(producto.id) === 20" [attr.aria-label]="'Agregar ' + producto.nombre">+</button>
+              </div>
+            </div>
+          }
         </div>
       </section>
     } @empty {
       <p class="catalog-message">Todavía no hay productos publicados. Volvé a visitarnos pronto.</p>
     }
+  }
+  @if (compraFinalizada(); as compra) {
+    <section class="candy-order-result" aria-live="polite">
+      <div><span class="eyebrow">PEDIDO CONFIRMADO</span><h2>Tu candy ya está listo.</h2><p>Mostrá este QR en el mostrador. Código: <strong>{{ compra.codigo }}</strong></p>
+        <p>{{ compra.productos.length }} productos · Total de la compra {{ precio(compra.total_centavos) }}</p>
+        @if (compra.recompensas_descuento_centavos) { <p>Premios de puntos aplicados: − {{ precio(compra.recompensas_descuento_centavos) }}</p> }
+        @if (compra.credito_usado_centavos) {
+          <p>Crédito aplicado <strong>− {{ precio(compra.credito_usado_centavos) }}</strong></p>
+          <p class="candy-final-amount">Saldo abonado <strong>{{ precio(compra.pago_otro_centavos) }}</strong></p>
+        }
+        @if (errorDocumento()) { <p role="alert">{{ errorDocumento() }}</p> }
+        <button class="button-outline" type="button" (click)="descargar()">Descargar comprobante PDF ↓</button>
+        @if (auth.currentUserData()) { <a class="button-outline" routerLink="/perfil">Ver mis compras</a> }
+      </div>
+      @if (qrDataUrl()) { <img [src]="qrDataUrl()" alt="QR para retirar el pedido" width="220" height="220"> }
+    </section>
+  } @else if (servicio.publicados().length) {
+    <section class="candy-order" aria-labelledby="candy-order-title">
+      <div><span class="eyebrow">PEDIDO SIN ENTRADA</span><h2 id="candy-order-title">Tu selección</h2>
+        @for (producto of aplicacionCanjes().productos; track producto.producto_id) {
+          <p>{{ producto.cantidad }} × {{ producto.nombre }} <strong>{{ precio(producto.subtotal_centavos) }}</strong></p>
+        } @empty { <p>Elegí tus productos para continuar.</p> }
+        @if (aplicacionCanjes().descuento) { <p>Premios de puntos <strong>− {{ precio(aplicacionCanjes().descuento) }}</strong></p> }
+        <p>Total de la compra <strong>{{ precio(total()) }}</strong></p>
+        @if (creditoAplicado()) { <p>Crédito aplicado <strong>− {{ precio(creditoAplicado()) }}</strong></p> }
+        <h3 class="candy-final-amount">Total a pagar: {{ precio(saldoAPagar()) }}</h3>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="comprar()">
+        @if (canjesDisponibles().length) {
+          <fieldset class="candy-rewards"><legend>Usar mis premios de puntos</legend>
+            @for (canje of canjesDisponibles(); track canje.id) {
+              <label><input type="checkbox" [checked]="codigosCanjes().includes(canje.codigo)" (change)="cambiarCanje(canje.codigo, $any($event.target).checked)">
+                {{ canje.recompensa_nombre }} · {{ canje.codigo }}</label>
+            }
+          </fieldset>
+          @if (aplicacionCanjes().error) { <p class="candy-error" role="alert">{{ aplicacionCanjes().error }}</p> }
+        }
+        <label for="candy-email">Correo electrónico</label>
+        <input id="candy-email" type="email" autocomplete="email" formControlName="email" [readOnly]="!!auth.currentUserData()">
+        @if (form.controls.email.touched && form.controls.email.invalid) { <small role="alert">Ingresá un correo válido.</small> }
+        @if (credito() > 0) {
+          <label class="candy-credit"><input type="checkbox" formControlName="usar_credito"> Usar crédito disponible (hasta {{ precio(credito()) }})</label>
+        }
+        @if (saldoAPagar() > 0) {
+          <label for="candy-payment">Medio de pago</label>
+          <select id="candy-payment" formControlName="medio_pago">
+            <option value="tarjeta_credito">Tarjeta de crédito</option><option value="tarjeta_debito">Tarjeta de débito</option><option value="billetera_virtual">Billetera virtual</option>
+          </select>
+          <small>Se registra el medio elegido; no se solicitan datos bancarios.</small>
+        } @else {
+          <small>Tu premio o crédito cubre todo el pedido.</small>
+        }
+        @if (compras.error()) { <p class="candy-error" role="alert">{{ compras.error() }}</p> }
+        <button class="button-primary" type="submit" [disabled]="!aplicacionCanjes().productos.length || !!aplicacionCanjes().error || compras.procesando()">{{ compras.procesando() ? 'Confirmando...' : 'Confirmar pedido de candy →' }}</button>
+      </form>
+    </section>
   }
 </section>

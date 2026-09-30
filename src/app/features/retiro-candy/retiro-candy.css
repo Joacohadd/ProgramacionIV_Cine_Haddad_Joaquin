@@ -4,6 +4,9 @@
 .pickup-heading h1 { margin: .8rem 0 0; font: 600 clamp(4rem, 7vw, 7rem)/.88 var(--display); letter-spacing: -.065em; }
 .pickup-heading h1 em { color: var(--coral); font-weight: 500; }
 .pickup-heading > p { margin: 0; color: #bdc6b9; line-height: 1.75; }
+.personal-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.5rem; }
+.personal-tabs a { padding: .8rem 1rem; border: 1px solid #596457; color: var(--cream); text-decoration: none; font-size: .72rem; font-weight: 800; }
+.personal-tabs a.active { background: var(--coral); border-color: var(--coral); color: var(--ink); }
 .pickup-layout { display: grid; grid-template-columns: minmax(340px, .8fr) minmax(0, 1.2fr); gap: 1px; margin-top: 2rem; border: 1px solid #596457; background: #596457; }
 .reader-panel, .order-panel { min-height: 590px; padding: 2.5rem; background: #172018; }
 .panel-number { float: right; color: #667163; font: 500 4rem/1 var(--display); }

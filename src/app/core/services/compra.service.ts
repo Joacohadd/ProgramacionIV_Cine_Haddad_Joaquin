@@ -1,12 +1,14 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { CanjeRecompensa } from '../models/recompensa.interface';
 import { ComboCompra, EntradaCompra, Compra, DatosConfirmacionCompra, ProductoCompra, ResultadoCompraRpc } from '../models/compra.interface';
 import { Pelicula } from '../models/pelicula.interface';
 import { FuncionDetalle } from '../models/programacion.interface';
-import { cumpleRestriccionEdad, fechaHoraFuncion, puedeCancelarCompra } from '../utils/compras';
+import { cumpleRestriccionEdad, edadEnFecha, fechaHoraFuncion, puedeCancelarCompra } from '../utils/compras';
 import { calcularEntradasFueraDeCombos } from '../utils/combo-compra';
 import { calcularDescuento } from '../utils/cupones';
 import { calcularPuntosCompra } from '../utils/fidelizacion';
 import { ventaHabilitada } from '../utils/estrenos';
+import { descuentoCanjes } from '../utils/aplicacion-canjes';
 import { AuthService } from './auth.service';
 import { ButacasService } from './butacas.service';
 import { ComboCandyService } from './combo-candy.service';
@@ -16,6 +18,7 @@ import { ProductoService } from './producto.service';
 import { SupabaseService } from './supabase.service';
 
 const DEMO_COMPRAS_KEY = 'umbral-demo-compras';
+const DEMO_CANJES_KEY = 'umbral-demo-canjes';
 
 @Injectable({ providedIn: 'root' })
 export class CompraService {
@@ -42,7 +45,8 @@ export class CompraService {
     entradas: EntradaCompra[],
     productos: ProductoCompra[] = [],
     combos: ComboCompra[] = [],
-    cuponId: string | null = null
+    cuponId: string | null = null,
+    codigosCanjes: string[] = []
   ): Promise<Compra> {
     if (!entradas.length) throw new Error('La reserva no tiene butacas. Volvé al mapa y elegí tus lugares.');
     this.procesando.set(true);
@@ -56,8 +60,8 @@ export class CompraService {
         throw new Error('La venta de entradas todavía no comenzó.');
       }
       const compra = this.supabase.client
-        ? await this.confirmarSupabase(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId)
-        : await this.confirmarDemo(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId);
+        ? await this.confirmarSupabase(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId, codigosCanjes)
+        : await this.confirmarDemo(datos, funcion, pelicula, fechaFuncion, entradas, productos, combos, cuponId, codigosCanjes);
       this.mensaje.set(compra.puntos_ganados > 0
         ? `Compra confirmada. Sumaste ${compra.puntos_ganados} puntos.`
         : productos.length || combos.length
@@ -71,6 +75,93 @@ export class CompraService {
     } finally {
       this.procesando.set(false);
     }
+  }
+
+  async confirmarSoloCandy(datos: Pick<DatosConfirmacionCompra, 'email' | 'usar_credito' | 'medio_pago'>, productos: ProductoCompra[], codigosCanjes: string[] = []): Promise<Compra> {
+    if (!productos.length) throw new Error('Elegí al menos un producto del candy.');
+    this.procesando.set(true);
+    this.error.set(null);
+    this.mensaje.set(null);
+    try {
+      const perfil = this.auth.currentUserData();
+      const disponibles = new Map(this.productos.publicados().map(producto => [producto.id, producto]));
+      const confirmados = productos.map(item => {
+        const producto = disponibles.get(item.producto_id);
+        if (!producto || !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 20) {
+          throw new Error('Uno de los productos ya no está disponible. Revisá tu pedido.');
+        }
+        return { producto_id: producto.id, nombre: producto.nombre, cantidad: item.cantidad,
+          precio_unitario_centavos: producto.precio_centavos, subtotal_centavos: producto.precio_centavos * item.cantidad };
+      });
+      const subtotal = confirmados.reduce((suma, item) => suma + item.subtotal_centavos, 0);
+      if (subtotal <= 0) throw new Error('El pedido no tiene un importe válido.');
+      const client = this.supabase.client;
+      const descuento = client ? 0 : this.prepararCanjesDemo(codigosCanjes, [], [], confirmados).descuento;
+      const total = subtotal - descuento;
+      let compra: Compra;
+      if (client) {
+        const { data, error } = await client.rpc(codigosCanjes.length ? 'confirmar_compra_candy_con_canjes' : 'confirmar_compra_candy', {
+          p_email: datos.email, p_productos: confirmados.map(item => ({ producto_id: item.producto_id, cantidad: item.cantidad })),
+          p_usar_credito: datos.usar_credito, p_medio_pago: datos.medio_pago,
+          ...(codigosCanjes.length ? { p_canjes: codigosCanjes } : {})
+        });
+        if (error) throw new Error(error.code === 'PGRST202'
+          ? 'Falta aplicar la migración de compras de solo candy en Supabase.' : error.message);
+        const resultado = data as ResultadoCompraRpc | null;
+        if (!resultado) throw new Error('No se recibieron los datos del pedido.');
+        compra = this.compraSoloCandy(resultado, perfil?.id ?? null);
+        await this.auth.recargarPerfil();
+        if (perfil) await this.cargarCompras();
+      } else {
+        const credito = perfil && datos.usar_credito ? Math.min(perfil.credito_centavos, total) : 0;
+        const puntos = perfil ? calcularPuntosCompra(total) : 0;
+        compra = this.compraSoloCandy({
+          compra_id: crypto.randomUUID(), compra_codigo: `UMB-${crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`,
+          compra_qr_token: crypto.randomUUID(), comprador_email: perfil?.email ?? datos.email.trim().toLowerCase(),
+          entradas_total_centavos: 0, productos_total_centavos: subtotal, combos_total_centavos: 0,
+          subtotal_centavos: subtotal, descuento_centavos: 0, recompensas_descuento_centavos: descuento,
+          canjes_aplicados: codigosCanjes, cupon_id: null, cupon_codigo: null, cupon_porcentaje: null,
+          puntos_ganados: puntos, total_centavos: total, credito_usado_centavos: credito,
+          pago_otro_centavos: total - credito, medio_pago: credito === total ? 'credito' : datos.medio_pago,
+          aviso_adulto: false, creada_en: new Date().toISOString(), productos: confirmados, combos: []
+        }, perfil?.id ?? null);
+        localStorage.setItem(DEMO_COMPRAS_KEY, JSON.stringify([...this.leerComprasDemo(), compra]));
+        this.marcarCanjesDemo(codigosCanjes, compra);
+        if (perfil) {
+          this.auth.actualizarCreditoDemo(perfil.credito_centavos - credito);
+          this.auth.actualizarPuntosDemo(perfil.puntos + puntos);
+          await this.cargarCompras();
+        }
+      }
+      this.mensaje.set('Pedido confirmado. Presentá el QR para retirar tu candy.');
+      return compra;
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'No se pudo completar el pedido.';
+      this.error.set(mensaje);
+      throw new Error(mensaje);
+    } finally {
+      this.procesando.set(false);
+    }
+  }
+
+  private compraSoloCandy(resultado: ResultadoCompraRpc, usuarioId: string | null): Compra {
+    return {
+      id: resultado.compra_id, codigo: resultado.compra_codigo, usuario_id: usuarioId,
+      comprador_email: resultado.comprador_email, funcion_id: '', pelicula_id: '',
+      pelicula_titulo: 'Solo candy', sala_nombre: '', fecha_funcion: '', hora_inicio: '',
+      formato: '2D', idioma: 'Castellano', entradas_total_centavos: 0,
+      productos_total_centavos: Number(resultado.productos_total_centavos), combos_total_centavos: 0,
+      subtotal_centavos: Number(resultado.productos_total_centavos), descuento_centavos: 0,
+      recompensas_descuento_centavos: Number(resultado.recompensas_descuento_centavos ?? 0),
+      canjes_aplicados: resultado.canjes_aplicados ?? [],
+      cupon_id: null, cupon_codigo: null, cupon_porcentaje: null,
+      puntos_ganados: Number(resultado.puntos_ganados), total_centavos: Number(resultado.total_centavos),
+      credito_usado_centavos: Number(resultado.credito_usado_centavos), pago_otro_centavos: Number(resultado.pago_otro_centavos),
+      medio_pago: resultado.medio_pago, estado: 'pagada', qr_token: resultado.compra_qr_token,
+      aviso_adulto: false, creada_en: resultado.creada_en, cancelada_en: null,
+      candy_retirado_en: null, ingreso_validado_en: null, entradas: [],
+      productos: this.normalizarProductos(resultado.productos), combos: []
+    };
   }
 
   async cargarCompras(): Promise<void> {
@@ -126,7 +217,7 @@ export class CompraService {
   }
 
   puedeCancelar(compra: Compra, ahora = new Date()): boolean {
-    return compra.estado === 'pagada' && !compra.candy_retirado_en && !compra.ingreso_validado_en
+    return Boolean(compra.funcion_id) && compra.estado === 'pagada' && !compra.candy_retirado_en && !compra.ingreso_validado_en
       && puedeCancelarCompra(compra.fecha_funcion, compra.hora_inicio, ahora);
   }
 
@@ -143,6 +234,7 @@ export class CompraService {
   }
 
   async descargarEntrada(compra: Compra): Promise<void> {
+    if (!compra.funcion_id) return this.descargarComprobanteCandy(compra);
     const [{ jsPDF }, qr] = await Promise.all([import('jspdf'), this.generarQrDataUrl(compra)]);
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
     const dinero = (centavos: number) => new Intl.NumberFormat('es-AR', {
@@ -209,7 +301,12 @@ export class CompraService {
       totalImporteY += 19;
       pdf.setFont('helvetica', 'bold');
     }
-    pdf.text('TOTAL', 28, totalEtiquetaY);
+    if (compra.recompensas_descuento_centavos) {
+      pdf.text(`PREMIOS DE PUNTOS: - ${dinero(compra.recompensas_descuento_centavos)}`, 28, totalEtiquetaY);
+      totalEtiquetaY += 12;
+      totalImporteY += 12;
+    }
+    pdf.text(compra.credito_usado_centavos ? 'TOTAL COMPRA' : 'TOTAL', 28, totalEtiquetaY);
     pdf.setFont('times', 'bold');
     pdf.setFontSize(23);
     pdf.text(dinero(compra.total_centavos), 28, totalImporteY);
@@ -228,14 +325,94 @@ export class CompraService {
     pdf.text('COMPRADOR', 28, 226);
     pdf.setFont('helvetica', 'normal');
     pdf.text(compra.comprador_email, 28, 235);
+    if (compra.credito_usado_centavos) {
+      pdf.setFillColor(166, 72, 46);
+      pdf.roundedRect(103, 223, 79, 39, 2, 2, 'F');
+      pdf.setTextColor(248, 245, 233);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.text('CRÉDITO APLICADO', 108, 232);
+      pdf.text(`− ${dinero(compra.credito_usado_centavos)}`, 177, 232, { align: 'right' });
+      pdf.setDrawColor(232, 226, 211);
+      pdf.line(108, 238, 177, 238);
+      pdf.text('SALDO ABONADO', 108, 247);
+      pdf.setFont('times', 'bold');
+      pdf.setFontSize(18);
+      pdf.text(dinero(compra.pago_otro_centavos), 108, 258);
+    }
     if (compra.aviso_adulto) {
       pdf.setFillColor(220, 115, 80);
-      pdf.roundedRect(28, 246, 154, 16, 2, 2, 'F');
+      pdf.roundedRect(28, compra.credito_usado_centavos ? 267 : 246, 154, compra.credito_usado_centavos ? 12 : 16, 2, 2, 'F');
       pdf.setTextColor(17, 23, 16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('PELÍCULA RESTRINGIDA · ASISTIR CON UNA PERSONA ADULTA.', 105, 256, { align: 'center' });
+      pdf.setFontSize(compra.credito_usado_centavos ? 8 : 9);
+      pdf.text('PELÍCULA RESTRINGIDA · ASISTIR CON UNA PERSONA ADULTA.', 105, compra.credito_usado_centavos ? 275 : 256, { align: 'center' });
     }
     pdf.save(`entrada-${compra.codigo.toLocaleLowerCase()}.pdf`);
+  }
+
+  private async descargarComprobanteCandy(compra: Compra): Promise<void> {
+    const [{ jsPDF }, qr] = await Promise.all([import('jspdf'), this.generarQrDataUrl(compra)]);
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    const dinero = (centavos: number) => new Intl.NumberFormat('es-AR', {
+      style: 'currency', currency: 'ARS', maximumFractionDigits: 0
+    }).format(centavos / 100);
+    pdf.setFillColor(17, 23, 16);
+    pdf.rect(0, 0, 210, 297, 'F');
+    pdf.setTextColor(248, 245, 233);
+    pdf.setFont('times', 'bold');
+    pdf.setFontSize(28);
+    pdf.text('Umbral / Candy bar', 22, 33);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    pdf.text(`Pedido ${compra.codigo}`, 22, 47);
+    pdf.text(`Comprador: ${compra.comprador_email}`, 22, 56);
+    let y = 77;
+    const nuevaPagina = () => {
+      pdf.addPage();
+      pdf.setFillColor(17, 23, 16);
+      pdf.rect(0, 0, 210, 297, 'F');
+      pdf.setTextColor(248, 245, 233);
+      y = 28;
+    };
+    for (const producto of compra.productos) {
+      if (y > 250) nuevaPagina();
+      pdf.text(`${producto.cantidad} x ${producto.nombre}`, 22, y, { maxWidth: 85 });
+      y += 9;
+    }
+    if (y > (compra.credito_usado_centavos ? 225 : 252)) nuevaPagina();
+    if (compra.recompensas_descuento_centavos) {
+      pdf.text(`Premios de puntos: - ${dinero(compra.recompensas_descuento_centavos)}`, 22, y);
+      y += 10;
+    }
+    if (compra.credito_usado_centavos) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.text(`Total de la compra: ${dinero(compra.total_centavos)}`, 22, y);
+      y += 10;
+      pdf.text(`Crédito aplicado: - ${dinero(compra.credito_usado_centavos)}`, 22, y);
+      y += 8;
+      pdf.setFillColor(220, 115, 80);
+      pdf.roundedRect(18, y, 88, 29, 2, 2, 'F');
+      pdf.setTextColor(17, 23, 16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9);
+      pdf.text('SALDO ABONADO', 22, y + 10);
+      pdf.setFont('times', 'bold');
+      pdf.setFontSize(19);
+      pdf.text(dinero(compra.pago_otro_centavos), 22, y + 23);
+    } else {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.text(`Total: ${dinero(compra.total_centavos)}`, 22, Math.min(280, y + 8));
+    }
+    pdf.setPage(1);
+    pdf.addImage(qr, 'PNG', 116, 78, 68, 68);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(248, 245, 233);
+    pdf.setFontSize(10);
+    pdf.text('Presentá este QR en el candy bar para retirar tu pedido.', 116, 155, { maxWidth: 70 });
+    pdf.save(`candy-${compra.codigo.toLowerCase()}.pdf`);
   }
 
   private async confirmarSupabase(
@@ -246,11 +423,12 @@ export class CompraService {
     entradas: EntradaCompra[],
     productos: ProductoCompra[],
     combos: ComboCompra[],
-    cuponId: string | null
+    cuponId: string | null,
+    codigosCanjes: string[]
   ): Promise<Compra> {
     const client = this.supabase.client;
     if (!client) throw new Error('Supabase no está configurado.');
-    const { data, error } = await client.rpc('confirmar_compra', {
+    const { data, error } = await client.rpc(codigosCanjes.length ? 'confirmar_compra_con_canjes' : 'confirmar_compra', {
       p_funcion_id: funcion.id,
       p_fecha: fechaFuncion,
       p_codigos: entradas.map(entrada => entrada.butaca_codigo),
@@ -267,7 +445,8 @@ export class CompraService {
         combo_id: combo.combo_id,
         cantidad: combo.cantidad
       })),
-      p_cupon_id: cuponId
+      p_cupon_id: cuponId,
+      ...(codigosCanjes.length ? { p_canjes: codigosCanjes } : {})
     });
     if (error) throw new Error(error.message);
     const resultado = (Array.isArray(data) ? data[0] : data) as ResultadoCompraRpc | null;
@@ -288,7 +467,8 @@ export class CompraService {
     entradas: EntradaCompra[],
     productos: ProductoCompra[],
     combos: ComboCompra[],
-    cuponId: string | null
+    cuponId: string | null,
+    codigosCanjes: string[]
   ): Promise<Compra> {
     const codigos = entradas.map(entrada => entrada.butaca_codigo).sort();
     const seleccionadas = [...this.butacas.seleccionadas()].sort();
@@ -372,8 +552,10 @@ export class CompraService {
       cupon = this.cupones.obtenerDisponible(cuponId);
       if (!cupon) throw new Error('El cupón ya no está disponible para esta compra.');
     }
+    if (cupon && codigosCanjes.length) throw new Error('Los premios de puntos no se combinan con cupones.');
     const descuento = cupon ? calcularDescuento(subtotal, cupon.porcentaje) : 0;
-    const total = subtotal - descuento;
+    const descuentoPremios = this.prepararCanjesDemo(codigosCanjes, entradas, combos, productosIndividuales).descuento;
+    const total = subtotal - descuento - descuentoPremios;
     const puntosGanados = perfil ? calcularPuntosCompra(total) : 0;
     const creditoUsado = perfil && datos.usar_credito ? Math.min(perfil.credito_centavos, total) : 0;
     const pagoOtro = total - creditoUsado;
@@ -396,6 +578,8 @@ export class CompraService {
       combos_total_centavos: combosTotal,
       subtotal_centavos: subtotal,
       descuento_centavos: descuento,
+      recompensas_descuento_centavos: descuentoPremios,
+      canjes_aplicados: codigosCanjes,
       cupon_id: cupon?.id ?? null,
       cupon_codigo: cupon?.codigo ?? null,
       cupon_porcentaje: cupon?.porcentaje ?? null,
@@ -406,7 +590,7 @@ export class CompraService {
       medio_pago: pagoOtro === 0 ? 'credito' : datos.medio_pago,
       estado: 'pagada',
       qr_token: crypto.randomUUID(),
-      aviso_adulto: pelicula.clasificacion !== 'ATP',
+      aviso_adulto: pelicula.clasificacion !== 'ATP' && edadEnFecha(nacimiento, fechaFuncion) < 18,
       creada_en: ahora,
       cancelada_en: null,
       candy_retirado_en: null,
@@ -418,6 +602,7 @@ export class CompraService {
 
     const compras = [...this.leerComprasDemo(), compra];
     localStorage.setItem(DEMO_COMPRAS_KEY, JSON.stringify(compras));
+    this.marcarCanjesDemo(codigosCanjes, compra);
     if (perfil) {
       this.auth.actualizarCreditoDemo(perfil.credito_centavos - creditoUsado);
       this.auth.actualizarPuntosDemo(perfil.puntos + puntosGanados);
@@ -442,6 +627,12 @@ export class CompraService {
       : item);
     localStorage.setItem(DEMO_COMPRAS_KEY, JSON.stringify(compras));
     this.auth.actualizarCreditoDemo(perfil.credito_centavos + compra.total_centavos);
+    if (compra.canjes_aplicados?.length) {
+      const codigos = new Set(compra.canjes_aplicados);
+      const canjes = this.leerCanjesDemo().map(canje => codigos.has(canje.codigo) && canje.compra_id === compra.id
+        ? { ...canje, entregado_en: null, compra_id: null, compra_codigo: null } : canje);
+      localStorage.setItem(DEMO_CANJES_KEY, JSON.stringify(canjes));
+    }
     this.auth.actualizarPuntosDemo(perfil.puntos - compra.puntos_ganados);
     this.butacas.liberarCompraDemo(compra.funcion_id, compra.fecha_funcion, compra.entradas.map(entrada => entrada.butaca_codigo));
     this.peliculas.actualizarEntradasVendidasDemo(compra.pelicula_id, -compra.entradas.length);
@@ -473,6 +664,8 @@ export class CompraService {
       combos_total_centavos: Number(resultado.combos_total_centavos),
       subtotal_centavos: Number(resultado.subtotal_centavos),
       descuento_centavos: Number(resultado.descuento_centavos),
+      recompensas_descuento_centavos: Number(resultado.recompensas_descuento_centavos ?? 0),
+      canjes_aplicados: resultado.canjes_aplicados ?? [],
       cupon_id: resultado.cupon_id,
       cupon_codigo: resultado.cupon_codigo,
       cupon_porcentaje: resultado.cupon_porcentaje == null ? null : Number(resultado.cupon_porcentaje),
@@ -512,12 +705,16 @@ export class CompraService {
       ? combos.reduce((total, combo) => total + combo.subtotal_centavos, 0)
       : Number(compra.combos_total_centavos);
     const descuento = Number(compra.descuento_centavos ?? 0);
+    const descuentoPremios = Number(compra.recompensas_descuento_centavos ?? 0);
     const subtotal = compra.subtotal_centavos == null
-      ? Number(compra.total_centavos) + descuento
+      ? Number(compra.total_centavos) + descuento + descuentoPremios
       : Number(compra.subtotal_centavos);
     return {
       ...compra,
-      hora_inicio: compra.hora_inicio.slice(0, 5),
+      funcion_id: compra.funcion_id ?? '',
+      pelicula_id: compra.pelicula_id ?? '',
+      fecha_funcion: compra.fecha_funcion ?? '',
+      hora_inicio: (compra.hora_inicio ?? '').slice(0, 5),
       entradas_total_centavos: compra.entradas_total_centavos == null
         ? subtotal - productosTotal - combosTotal
         : Number(compra.entradas_total_centavos),
@@ -525,6 +722,8 @@ export class CompraService {
       combos_total_centavos: combosTotal,
       subtotal_centavos: subtotal,
       descuento_centavos: descuento,
+      recompensas_descuento_centavos: descuentoPremios,
+      canjes_aplicados: compra.canjes_aplicados ?? [],
       cupon_id: compra.cupon_id ?? null,
       cupon_codigo: compra.cupon_codigo ?? null,
       cupon_porcentaje: compra.cupon_porcentaje == null ? null : Number(compra.cupon_porcentaje),
@@ -558,5 +757,50 @@ export class CompraService {
       precio_unitario_centavos: Number(combo.precio_unitario_centavos),
       subtotal_centavos: Number(combo.subtotal_centavos)
     })) : [];
+  }
+
+  private prepararCanjesDemo(codigos: string[], entradas: EntradaCompra[], combos: ComboCompra[], productos: ProductoCompra[]): { descuento: number } {
+    if (!codigos.length) return { descuento: 0 };
+    const perfil = this.auth.currentUserData();
+    if (!perfil) throw new Error('Iniciá sesión para usar tus premios de puntos.');
+    if (new Set(codigos).size !== codigos.length) throw new Error('Hay un premio repetido en la compra.');
+    const canjes = this.leerCanjesDemo();
+    const elegidos = codigos.map(codigo => {
+      const canje = canjes.find(item => item.codigo === codigo && item.usuario_id === perfil.id && !item.entregado_en);
+      if (!canje) throw new Error('Uno de los premios ya fue usado o no pertenece a tu cuenta.');
+      return canje;
+    });
+    const cantidades = new Map(productos.map(producto => [producto.producto_id, producto.cantidad]));
+    for (const canje of elegidos.filter(item => item.tipo === 'producto')) {
+      const cantidad = cantidades.get(canje.producto_id ?? '') ?? 0;
+      if (cantidad < 1) throw new Error('Agregá al pedido el producto correspondiente al premio.');
+      cantidades.set(canje.producto_id!, cantidad - 1);
+    }
+    return { descuento: descuentoCanjes(elegidos, entradas, combos, this.productos.publicados()) };
+  }
+
+  private marcarCanjesDemo(codigos: string[], compra: Compra): void {
+    if (!codigos.length) return;
+    const usados = new Set(codigos);
+    const canjes = this.leerCanjesDemo().map(canje => usados.has(canje.codigo)
+      ? { ...canje, entregado_en: compra.creada_en, compra_id: compra.id, compra_codigo: compra.codigo }
+      : canje);
+    localStorage.setItem(DEMO_CANJES_KEY, JSON.stringify(canjes));
+    let historial: unknown[] = [];
+    try { historial = JSON.parse(localStorage.getItem('umbral-demo-auditoria') ?? '[]') as unknown[]; }
+    catch { /* Se inicia un historial de muestra. */ }
+    for (const canje of canjes.filter(item => usados.has(item.codigo))) {
+      historial.unshift({ id: crypto.randomUUID(), usuario_id: compra.usuario_id,
+        usuario_email: compra.comprador_email, accion: 'canje_aplicado',
+        entidad: 'canjes_recompensas', entidad_id: canje.id,
+        detalle: { codigo: canje.codigo, compra_codigo: compra.codigo, recompensa: canje.recompensa_nombre },
+        creado_en: compra.creada_en });
+    }
+    localStorage.setItem('umbral-demo-auditoria', JSON.stringify(historial));
+  }
+
+  private leerCanjesDemo(): Array<CanjeRecompensa & { usuario_id: string }> {
+    try { return JSON.parse(localStorage.getItem(DEMO_CANJES_KEY) ?? '[]') as Array<CanjeRecompensa & { usuario_id: string }>; }
+    catch { return []; }
   }
 }

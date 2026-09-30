@@ -2,7 +2,7 @@
   <a class="back-link" routerLink="/admin/peliculas">← Volver a administración</a>
   <header class="admin-heading">
     <div><span class="eyebrow">ADMINISTRACIÓN / FIDELIZACIÓN</span><h1>Premiá cada visita <em>al cine.</em></h1></div>
-    <p>Creá recompensas por entradas o productos y configurá cuántos puntos necesita cada canje.</p>
+    <div><p>Creá recompensas por entradas o productos y configurá cuántos puntos necesita cada canje.</p><a class="button-outline" routerLink="/personal/canjes-puntos">Consultar canjes de puntos ↗</a></div>
   </header>
 
   @if (error() || servicio.error()) { <p class="form-error" role="alert">{{ error() || servicio.error() }}</p> }

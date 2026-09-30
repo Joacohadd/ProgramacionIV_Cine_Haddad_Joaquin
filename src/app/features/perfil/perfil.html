@@ -37,7 +37,7 @@
           <section class="redemption-history" aria-labelledby="redemption-title">
             <div class="history-heading"><span>RF-046 / HISTORIAL</span><h3 id="redemption-title">Mis canjes</h3></div>
             @for (canje of fidelizacion.canjes(); track canje.id) {
-              <article class="redemption-row"><div><span>{{ canje.tipo === 'entrada' ? 'ENTRADA' : 'PRODUCTO' }}</span><strong>{{ canje.recompensa_nombre }}</strong><small>{{ fechaCanje(canje.creado_en) }}</small></div><div><span>CÓDIGO PERSONAL</span><code>{{ canje.codigo }}</code></div><div><span>COSTO</span><strong>{{ canje.costo_puntos }} puntos</strong></div></article>
+              <article class="redemption-row"><div><span>{{ canje.tipo === 'entrada' ? 'ENTRADA' : 'PRODUCTO' }}</span><strong>{{ canje.recompensa_nombre }}</strong><small>{{ fechaCanje(canje.creado_en) }}</small></div><div><span>CÓDIGO PERSONAL</span><code>{{ canje.codigo }}</code><small>{{ canje.compra_codigo ? 'Aplicado en la compra ' + canje.compra_codigo : canje.entregado_en ? 'Validado anteriormente' : 'Marcá este premio al comprar una entrada o candy' }}</small></div><div><span>ESTADO</span><strong>{{ canje.entregado_en ? (canje.compra_codigo ? 'Aplicado' : 'Validado') : 'Disponible' }}</strong><small>{{ canje.costo_puntos }} puntos</small></div></article>
             } @empty { <p class="purchase-empty">Todavía no realizaste canjes.</p> }
           </section>
         }
@@ -71,7 +71,7 @@
       </section>
 
       <section class="purchases" aria-labelledby="purchases-title">
-        <header><div><span class="eyebrow">05 / ENTRADAS Y CANCELACIONES</span><h2 id="purchases-title">Mis compras</h2></div><p>Podés cancelar hasta 2 horas antes de la función. El reintegro se suma al crédito de tu cuenta.</p></header>
+        <header><div><span class="eyebrow">05 / ENTRADAS Y CANDY</span><h2 id="purchases-title">Mis compras</h2></div><p>Las entradas pueden cancelarse hasta 2 horas antes de la función. Los pedidos de solo candy se retiran con el QR.</p></header>
         @if (compras.error()) { <p class="form-error" role="alert">{{ compras.error() }}</p> }
         @if (compras.mensaje()) { <p class="form-success" role="status">{{ compras.mensaje() }}</p> }
         @if (errorDocumento()) { <p class="form-error" role="alert">{{ errorDocumento() }}</p> }
@@ -82,15 +82,15 @@
             @for (compra of compras.compras(); track compra.id) {
               <article class="purchase-item" [class.cancelled]="compra.estado === 'cancelada'">
                 <div class="purchase-code"><span>{{ compra.estado === 'pagada' ? 'VIGENTE' : 'CANCELADA' }}</span><strong>{{ compra.codigo }}</strong></div>
-                <div class="purchase-main"><h3>{{ compra.pelicula_titulo }}</h3><p>{{ fechaFuncion(compra) }} · {{ compra.hora_inicio }}<br>{{ compra.sala_nombre }} · {{ compra.formato }} · {{ compra.idioma }}</p>@if (compra.combos.length) { <p class="purchase-candy"><span>COMBOS</span>@for (combo of compra.combos; track combo.combo_id) { {{ combo.cantidad }}× {{ combo.nombre }}@if (!$last) { · } }</p> }@if (compra.productos.length) { <p class="purchase-candy"><span>CANDY</span>@for (producto of compra.productos; track producto.producto_id) { {{ producto.cantidad }}× {{ producto.nombre }}@if (!$last) { · } }</p> }@if (compra.cupon_codigo) { <p class="purchase-candy"><span>CUPÓN</span>{{ compra.cupon_codigo }} · {{ compra.cupon_porcentaje }}% de descuento</p> }@if (compra.candy_retirado_en) { <p class="purchase-candy"><span>RETIRO</span>Pedido entregado</p> }</div>
-                <div class="purchase-seats"><span>BUTACAS</span><strong>@for (entrada of compra.entradas; track entrada.butaca_codigo) { {{ entrada.butaca_codigo }}@if (!$last) { · } }</strong></div>
+                <div class="purchase-main"><h3>{{ compra.pelicula_titulo }}</h3>@if (compra.funcion_id) { <p>{{ fechaFuncion(compra) }} · {{ compra.hora_inicio }}<br>{{ compra.sala_nombre }} · {{ compra.formato }} · {{ compra.idioma }}</p> } @else { <p>Pedido sin entrada · Retirá en el candy bar con el QR.</p> }@if (compra.combos.length) { <p class="purchase-candy"><span>COMBOS</span>@for (combo of compra.combos; track combo.combo_id) { {{ combo.cantidad }}× {{ combo.nombre }}@if (!$last) { · } }</p> }@if (compra.productos.length) { <p class="purchase-candy"><span>CANDY</span>@for (producto of compra.productos; track producto.producto_id) { {{ producto.cantidad }}× {{ producto.nombre }}@if (!$last) { · } }</p> }@if (compra.cupon_codigo) { <p class="purchase-candy"><span>CUPÓN</span>{{ compra.cupon_codigo }} · {{ compra.cupon_porcentaje }}% de descuento</p> }@if (compra.candy_retirado_en) { <p class="purchase-candy"><span>RETIRO</span>Pedido entregado</p> }</div>
+                @if (compra.entradas.length) { <div class="purchase-seats"><span>BUTACAS</span><strong>@for (entrada of compra.entradas; track entrada.butaca_codigo) { {{ entrada.butaca_codigo }}@if (!$last) { · } }</strong></div> }
                 <div class="purchase-total"><span>TOTAL</span><strong>{{ precio(compra.total_centavos) }}</strong>@if (compra.puntos_ganados) { <small>+{{ compra.puntos_ganados }} puntos</small> }</div>
                 <div class="purchase-actions">
                   @if (compra.estado === 'pagada') {
-                    <button type="button" class="ticket-action" (click)="descargar(compra)">Descargar PDF</button>
+                    <button type="button" class="ticket-action" (click)="descargar(compra)">{{ compra.funcion_id ? 'Descargar entrada PDF' : 'Descargar pedido PDF' }}</button>
                     @if (compras.puedeCancelar(compra)) {
                       <button type="button" class="cancel-action" [disabled]="compras.procesando()" (click)="cancelar(compra)">Cancelar y acreditar saldo</button>
-                    } @else { <small>{{ compra.ingreso_validado_en ? 'Entrada utilizada: no cancelable' : compra.candy_retirado_en ? 'Candy retirado: no cancelable' : 'Fuera del plazo de cancelación' }}</small> }
+                    } @else if (compra.funcion_id) { <small>{{ compra.ingreso_validado_en ? 'Entrada utilizada: no cancelable' : compra.candy_retirado_en ? 'Candy retirado: no cancelable' : 'Fuera del plazo de cancelación' }}</small> }
                   } @else { <small>Reintegrada como crédito</small> }
                 </div>
               </article>

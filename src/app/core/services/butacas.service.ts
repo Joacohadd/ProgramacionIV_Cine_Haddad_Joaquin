@@ -298,7 +298,7 @@ export class ButacasService {
 
   private tipoDesdeCodigo(codigo: string): TipoButaca {
     const fila = codigo.split('-')[0];
-    if (fila === 'J' || fila === 'K') return 'accesible';
+    if (fila === 'J') return 'accesible';
     if (['R', 'S', 'T'].includes(fila)) return 'vip';
     return 'estandar';
   }

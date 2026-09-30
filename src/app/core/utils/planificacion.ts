@@ -12,8 +12,9 @@ function minutosHora(hora: string): number {
 
 export function capacidadSala(sala: Pick<Sala, 'filas' | 'butacas_izquierda' | 'butacas_centro' | 'butacas_derecha'>): number {
   const butacasFilaGeneral = sala.butacas_izquierda + sala.butacas_centro + sala.butacas_derecha;
-  const filasAccesibles = Number(sala.filas >= 10) + Number(sala.filas >= 11);
-  return (sala.filas - filasAccesibles) * butacasFilaGeneral + filasAccesibles * 14;
+  const filasVisibles = sala.filas - Number(sala.filas >= 11);
+  const filasAccesibles = Number(sala.filas >= 10);
+  return (filasVisibles - filasAccesibles) * butacasFilaGeneral + filasAccesibles * 14;
 }
 
 export function horaFin(horaInicio: string, duracionMinutos: number): string {

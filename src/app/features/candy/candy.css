@@ -10,3 +10,26 @@ h1 em { color: var(--coral); font-weight: 500; }
 .category-heading h2 { font: 600 2.6rem/1.1 var(--display); letter-spacing: -.04em; margin: 0; overflow-wrap: anywhere; }
 .category-heading span { color: #bdc6b9; font-size: .72rem; white-space: nowrap; }
 .catalog-message { grid-column: 1 / -1; padding: 4rem 0; color: #bdc6b9; }
+.candy-product { min-width: 0; display: flex; flex-direction: column; }
+.candy-product app-producto-card { flex: 1; height: auto; }
+.candy-quantity { display: flex; justify-content: center; align-items: center; gap: 1rem; padding: .8rem; border: 1px solid #596457; border-top: 0; }
+.candy-quantity button { width: 2.3rem; height: 2.3rem; background: transparent; color: var(--coral); border: 1px solid #596457; cursor: pointer; font-size: 1.25rem; }
+.candy-quantity button:disabled { opacity: .4; cursor: default; }
+.candy-quantity output { min-width: 1.5rem; text-align: center; }
+.candy-order, .candy-order-result { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 4rem; padding: 2rem; border: 1px solid #596457; }
+.candy-order h2, .candy-order-result h2 { font: 600 2.5rem/1 var(--display); margin: .7rem 0 1.5rem; }
+.candy-order p { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #596457; padding-bottom: .5rem; }
+.candy-order .candy-final-amount, .candy-order-result .candy-final-amount { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: .8rem 1rem; background: var(--coral); color: var(--ink); border: 0; font-weight: 700; }
+.candy-order .candy-final-amount { margin-top: .8rem; font-size: 1.25rem; }
+.candy-order form { display: grid; align-content: start; gap: .7rem; }
+.candy-rewards { display: grid; gap: .7rem; margin: 0 0 1rem; padding: 1rem; border: 1px solid #596457; }
+.candy-rewards legend { padding: 0 .4rem; color: var(--coral); font-weight: 700; }
+.candy-rewards label { display: flex; align-items: center; gap: .6rem; cursor: pointer; }
+.candy-order input:not([type='checkbox']), .candy-order select { padding: .8rem; background: #f8f5e9; color: #111710; border: 0; }
+.candy-order form .button-primary { margin-top: 1rem; }
+.candy-order small, .candy-error { color: #ffb6a7; }
+.candy-order-result { align-items: center; }
+.candy-order-result img { background: #f8f5e9; padding: .7rem; justify-self: center; }
+.candy-order-result .button-outline { display: inline-block; margin: 1rem 1rem 0 0; }
+@media (max-width: 700px) { .candy-heading, .candy-order, .candy-order-result { grid-template-columns: 1fr; gap: 1.5rem; } .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .product-grid { grid-template-columns: 1fr; } }

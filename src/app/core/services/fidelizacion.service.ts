@@ -96,7 +96,7 @@ export class FidelizacionService {
         this.canjearDemo(recompensa);
       }
       await this.cargarPerfil();
-      this.mensaje.set(`Canje confirmado: ${recompensa.nombre}. El código quedó guardado en tu historial.`);
+      this.mensaje.set(`Premio reclamado: ${recompensa.nombre}. Podés marcarlo al comprar una entrada o candy.`);
     } catch (error) {
       const mensaje = error instanceof Error ? error.message : 'No se pudo completar el canje.';
       this.error.set(mensaje);
@@ -157,10 +157,11 @@ export class FidelizacionService {
     }
     if (perfil.puntos < disponible.costo_puntos) throw new Error('No tenés puntos suficientes para esta recompensa.');
 
-    const canje: CanjeRecompensa & { usuario_id: string } = {
+    const canje: CanjeRecompensa & { usuario_id: string; usuario_email: string } = {
       id: crypto.randomUUID(),
       codigo: `CAN-${crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`,
       usuario_id: perfil.id,
+      usuario_email: perfil.email,
       recompensa_id: disponible.id,
       recompensa_nombre: disponible.nombre,
       recompensa_descripcion: disponible.descripcion,
@@ -168,7 +169,8 @@ export class FidelizacionService {
       producto_id: disponible.producto_id,
       producto_nombre: disponible.tipo === 'producto' ? this.nombreProducto(disponible.producto_id) : null,
       costo_puntos: disponible.costo_puntos,
-      creado_en: new Date().toISOString()
+      creado_en: new Date().toISOString(),
+      entregado_en: null
     };
     localStorage.setItem(CANJES_DEMO_KEY, JSON.stringify([...this.leerCanjesDemo(), canje]));
     this.auth.actualizarPuntosDemo(perfil.puntos - disponible.costo_puntos);
@@ -193,7 +195,8 @@ export class FidelizacionService {
   }
 
   private normalizarCanje(canje: CanjeRecompensa): CanjeRecompensa {
-    return { ...canje, costo_puntos: Number(canje.costo_puntos) };
+    return { ...canje, costo_puntos: Number(canje.costo_puntos), entregado_en: canje.entregado_en ?? null,
+      compra_id: canje.compra_id ?? null, compra_codigo: canje.compra_codigo ?? null };
   }
 
   private leerRecompensasDemo(): Recompensa[] {

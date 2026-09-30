@@ -1,0 +1,51 @@
+.canjes-page { min-height: 80vh; padding: 3rem 0 7rem; }
+.back-link, .eyebrow, .section-index { color: var(--coral); }
+.canjes-heading { display: grid; grid-template-columns: 1.25fr .75fr; align-items: end; gap: 5rem; padding: 4.5rem 0 3rem; border-bottom: 1px solid #596457; }
+.canjes-heading h1 { margin: .8rem 0 0; font: 600 clamp(4rem, 7vw, 7rem)/.9 var(--display); letter-spacing: -.065em; }
+.canjes-heading h1 em { color: var(--coral); font-weight: 500; }
+.canjes-heading p { max-width: 420px; margin: 0; color: #bdc6b9; line-height: 1.7; }
+.personal-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.5rem; }
+.personal-tabs a { padding: .8rem 1rem; border: 1px solid #596457; color: var(--cream); text-decoration: none; font-size: .72rem; font-weight: 800; }
+.personal-tabs a.active { background: var(--coral); border-color: var(--coral); color: var(--ink); }
+.canjes-layout { display: grid; grid-template-columns: minmax(340px, .85fr) minmax(0, 1.15fr); gap: 1px; margin-top: 2rem; border: 1px solid #596457; background: #596457; align-items: start; }
+.canjes-reader, .canjes-history { min-height: 650px; padding: 2rem; background: #172018; }
+.section-index { font-size: .62rem; font-weight: 800; letter-spacing: .14em; }
+.canjes-reader h2, .canjes-history h2 { margin: .5rem 0 1rem; font: 600 2.7rem/1 var(--display); letter-spacing: -.045em; }
+.canjes-reader > p { color: #aeb8aa; font-size: .85rem; line-height: 1.6; }
+.canjes-reader form { display: grid; gap: .65rem; margin: 2rem 0; }
+.canjes-reader label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; }
+.search-row { display: flex; gap: .6rem; }
+.search-row input { width: 100%; min-width: 0; padding: .8rem 1rem; border: 1px solid #596457; background: #202a21; color: var(--cream); font: 700 1rem/1 monospace; text-transform: uppercase; }
+.search-row button { flex: none; }
+.field-error, .canjes-error { color: #ffb6a7; }
+.canjes-error, .canjes-success { padding: .8rem 1rem; border: 1px solid currentColor; font-size: .8rem; }
+.canjes-success { color: #b9d3ae; }
+.canje-result { margin-top: 1.5rem; padding: 1.5rem; border: 1px solid var(--coral); background: #202a21; }
+.canje-result.used { border-color: #637063; }
+.result-head { display: flex; justify-content: space-between; gap: 1rem; font-size: .6rem; font-weight: 800; letter-spacing: .12em; color: var(--coral); }
+.result-head strong { color: #b9d3ae; }
+.result-head strong.used { color: #b9c0b4; }
+.canje-result h3 { margin: 1rem 0 .4rem; font: 600 2.1rem/1.05 var(--display); }
+.canje-result > p { color: #bec8b9; line-height: 1.5; font-size: .8rem; }
+.canje-result dl { margin: 1.4rem 0; border-top: 1px solid #596457; }
+.canje-result dl > div { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem 0; border-bottom: 1px solid #596457; font-size: .75rem; }
+.canje-result dt { color: #93a18f; }
+.canje-result dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.canje-result code { color: var(--coral); font-weight: 800; }
+.canje-result .used-note { color: #ffb6a7; }
+.confirm-action { width: 100%; margin-top: .6rem; }
+.history-head { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1.5rem; border-bottom: 1px solid #596457; }
+.history-head h2 { margin-bottom: 0; }
+.history-head button { border: 0; background: none; color: var(--coral); cursor: pointer; }
+.history-row { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: 1rem; align-items: center; width: 100%; padding: 1rem 0; border: 0; border-bottom: 1px solid #465244; background: transparent; color: var(--cream); text-align: left; cursor: pointer; }
+.history-row:hover, .history-row:focus-visible { background: #202d22; }
+.history-row > span:first-child { display: grid; gap: .25rem; }
+.history-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.history-row strong { font-family: monospace; color: var(--coral); }
+.history-row small { color: #98a394; font-size: .65rem; }
+.reward-name { font-size: .78rem; }
+.history-status { color: #b9d3ae; font-size: .6rem; font-weight: 800; letter-spacing: .1em; }
+.history-status.done { color: #a9b1a5; }
+.history-empty { color: #aeb8aa; padding: 3rem 0; }
+@media (max-width: 900px) { .canjes-heading, .canjes-layout { grid-template-columns: 1fr; gap: 1.5rem; } .canjes-reader, .canjes-history { min-height: 0; } }
+@media (max-width: 580px) { .search-row { flex-direction: column; } .history-row { grid-template-columns: 1fr auto; } .reward-name { grid-column: 1 / -1; grid-row: 2; } }

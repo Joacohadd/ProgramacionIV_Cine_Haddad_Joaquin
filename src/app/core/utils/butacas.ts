@@ -16,7 +16,7 @@ function etiquetaFila(indice: number): string {
 }
 
 function tipoFila(etiqueta: string): TipoButaca {
-  if (etiqueta === 'J' || etiqueta === 'K') return 'accesible';
+  if (etiqueta === 'J') return 'accesible';
   if (['R', 'S', 'T'].includes(etiqueta)) return 'vip';
   return 'estandar';
 }
@@ -28,27 +28,28 @@ function distribucionFila(sala: Sala, tipo: TipoButaca): [number, number, number
 }
 
 export function generarMapaButacas(sala: Sala, precioBaseCentavos = PRECIO_BUTACA_CENTAVOS): FilaButacas[] {
-  return Array.from({ length: sala.filas }, (_, indiceFila) => {
-    const etiqueta = etiquetaFila(indiceFila + 1);
-    const tipo = tipoFila(etiqueta);
-    const cantidades = distribucionFila(sala, tipo);
-    let numero = 1;
-    const nombresSectores: SectorButaca[] = ['izquierda', 'centro', 'derecha'];
-    const sectores = cantidades.map((cantidad, indiceSector) => Array.from({ length: cantidad }, () => {
-      const butaca: ButacaMapa = {
-        codigo: `${etiqueta}-${String(numero).padStart(2, '0')}`,
-        fila: etiqueta,
-        numero,
-        sector: nombresSectores[indiceSector],
-        tipo,
-        precio_centavos: precioBaseCentavos + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0)
-      };
-      numero++;
-      return butaca;
-    })) as [ButacaMapa[], ButacaMapa[], ButacaMapa[]];
+  return Array.from({ length: sala.filas }, (_, indiceFila) => etiquetaFila(indiceFila + 1))
+    .filter(etiqueta => etiqueta !== 'K')
+    .map(etiqueta => {
+      const tipo = tipoFila(etiqueta);
+      const cantidades = distribucionFila(sala, tipo);
+      let numero = 1;
+      const nombresSectores: SectorButaca[] = ['izquierda', 'centro', 'derecha'];
+      const sectores = cantidades.map((cantidad, indiceSector) => Array.from({ length: cantidad }, () => {
+        const butaca: ButacaMapa = {
+          codigo: `${etiqueta}-${String(numero).padStart(2, '0')}`,
+          fila: etiqueta,
+          numero,
+          sector: nombresSectores[indiceSector],
+          tipo,
+          precio_centavos: precioBaseCentavos + (tipo === 'vip' ? RECARGO_VIP_CENTAVOS : 0)
+        };
+        numero++;
+        return butaca;
+      })) as [ButacaMapa[], ButacaMapa[], ButacaMapa[]];
 
-    return { etiqueta, tipo, sectores };
-  });
+      return { etiqueta, tipo, sectores };
+    });
 }
 
 export function buscarButaca(mapa: FilaButacas[], codigo: string): ButacaMapa | undefined {

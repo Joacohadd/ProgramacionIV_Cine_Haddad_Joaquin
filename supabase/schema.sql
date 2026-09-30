@@ -445,7 +445,8 @@ begin
     v_fila_numero := ascii(v_fila) - 64;
     if v_fila_numero < 1 or v_fila_numero > v_sala.filas then raise exception 'La fila % no existe en esta sala.', v_fila; end if;
 
-    if v_fila in ('J', 'K') then
+    if v_fila = 'K' then raise exception 'La fila K no está disponible.'; end if;
+    if v_fila = 'J' then
       v_tipo := 'accesible'; v_maximo := 14;
     elsif v_fila in ('R', 'S', 'T') then
       v_tipo := 'vip'; v_maximo := v_sala.butacas_izquierda + v_sala.butacas_centro + v_sala.butacas_derecha;
@@ -3106,3 +3107,980 @@ $$;
 
 revoke all on function public.reporte_ventas_admin(date, text) from public;
 grant execute on function public.reporte_ventas_admin(date, text) to authenticated;
+
+-- Ajustes del 29/09/2026.
+-- Compras de candy sin función, fila K fuera de venta y reportes diarios.
+alter table public.compras alter column funcion_id drop not null;
+alter table public.compras alter column fecha_funcion drop not null;
+alter table public.compras drop constraint if exists compras_funcion_fecha_juntas;
+alter table public.compras add constraint compras_funcion_fecha_juntas
+  check ((funcion_id is null) = (fecha_funcion is null));
+
+create or replace function public.rechazar_fila_k()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if split_part(new.butaca_codigo, '-', 1) = 'K' then
+    raise exception 'La fila K ya no está disponible para reservar.';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists reservas_sin_fila_k on public.reservas_butacas;
+create trigger reservas_sin_fila_k before insert or update of butaca_codigo
+on public.reservas_butacas for each row execute function public.rechazar_fila_k();
+
+create or replace function public.confirmar_compra_candy(
+  p_email text, p_productos jsonb, p_usar_credito boolean, p_medio_pago text
+)
+returns jsonb language plpgsql security definer
+set search_path = public, pg_temp as $$
+declare
+  v_usuario uuid := auth.uid();
+  v_perfil public.perfiles%rowtype;
+  v_email text := lower(trim(coalesce(p_email, '')));
+  v_item jsonb;
+  v_producto public.productos_candy%rowtype;
+  v_cantidad integer;
+  v_total bigint := 0;
+  v_credito bigint := 0;
+  v_puntos bigint := 0;
+  v_compra public.compras%rowtype;
+  v_productos jsonb;
+  v_ids uuid[] := '{}';
+begin
+  if p_productos is null or jsonb_typeof(p_productos) <> 'array' then
+    raise exception 'La selección de productos no es válida.';
+  end if;
+  if jsonb_array_length(p_productos) = 0 then
+    raise exception 'Elegí al menos un producto del candy.';
+  end if;
+  if jsonb_array_length(p_productos) > 30 then
+    raise exception 'La compra contiene demasiados productos.';
+  end if;
+  if p_medio_pago is null or p_medio_pago not in ('tarjeta_credito', 'tarjeta_debito', 'billetera_virtual') then
+    raise exception 'Elegí un medio de pago válido.';
+  end if;
+  if v_usuario is not null then
+    select * into v_perfil from public.perfiles where id = v_usuario for update;
+    if not found then raise exception 'No se encontró tu perfil. Volvé a iniciar sesión.'; end if;
+    v_email := v_perfil.email;
+  elsif v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
+    raise exception 'Ingresá un correo electrónico válido.';
+  end if;
+
+  for v_item in select value from jsonb_array_elements(p_productos) loop
+    if coalesce(v_item->>'producto_id', '') !~ '^[0-9a-fA-F-]{36}$'
+       or coalesce(v_item->>'cantidad', '') !~ '^[0-9]+$' then
+      raise exception 'La selección de productos no es válida.';
+    end if;
+    v_cantidad := (v_item->>'cantidad')::integer;
+    if v_cantidad < 1 or v_cantidad > 20 then raise exception 'Podés comprar hasta 20 unidades de cada producto.'; end if;
+    if (v_item->>'producto_id')::uuid = any(v_ids) then raise exception 'Hay un producto repetido en la compra.'; end if;
+    select * into v_producto from public.productos_candy
+    where id = (v_item->>'producto_id')::uuid and activo = true for share;
+    if not found then raise exception 'Uno de los productos ya no está disponible.'; end if;
+    v_ids := array_append(v_ids, v_producto.id);
+    v_total := v_total + v_producto.precio_centavos::bigint * v_cantidad;
+  end loop;
+
+  if v_usuario is not null and coalesce(p_usar_credito, false) then
+    v_credito := least(v_perfil.credito_centavos, v_total);
+  end if;
+  v_puntos := case when v_usuario is not null then v_total / 100 else 0 end;
+  insert into public.compras (
+    codigo, usuario_id, comprador_email, funcion_id, fecha_funcion,
+    entradas_total_centavos, productos_total_centavos, combos_total_centavos,
+    total_centavos, credito_usado_centavos, pago_otro_centavos, medio_pago, puntos_ganados
+  ) values (
+    'UMB-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10)),
+    v_usuario, v_email, null, null,
+    0, v_total, 0, v_total, v_credito, v_total - v_credito,
+    case when v_credito = v_total then 'credito' else p_medio_pago end, v_puntos
+  ) returning * into v_compra;
+
+  for v_item in select value from jsonb_array_elements(p_productos) loop
+    select * into v_producto from public.productos_candy where id = (v_item->>'producto_id')::uuid;
+    insert into public.compra_productos (compra_id, producto_id, producto_nombre, cantidad, precio_unitario_centavos)
+    values (v_compra.id, v_producto.id, v_producto.nombre, (v_item->>'cantidad')::integer, v_producto.precio_centavos);
+  end loop;
+  if v_usuario is not null then
+    update public.perfiles set credito_centavos = credito_centavos - v_credito,
+      puntos = puntos + v_puntos where id = v_usuario;
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'producto_id', cp.producto_id, 'nombre', cp.producto_nombre,
+    'cantidad', cp.cantidad, 'precio_unitario_centavos', cp.precio_unitario_centavos,
+    'subtotal_centavos', cp.subtotal_centavos) order by cp.producto_nombre), '[]'::jsonb)
+  into v_productos from public.compra_productos cp where cp.compra_id = v_compra.id;
+  return jsonb_build_object(
+    'compra_id', v_compra.id, 'compra_codigo', v_compra.codigo,
+    'compra_qr_token', v_compra.qr_token, 'comprador_email', v_email,
+    'productos_total_centavos', v_total, 'total_centavos', v_total,
+    'credito_usado_centavos', v_credito, 'pago_otro_centavos', v_total - v_credito,
+    'medio_pago', v_compra.medio_pago, 'puntos_ganados', v_puntos,
+    'creada_en', v_compra.creada_en, 'productos', v_productos
+  );
+end;
+$$;
+revoke all on function public.confirmar_compra_candy(text, jsonb, boolean, text) from public;
+grant execute on function public.confirmar_compra_candy(text, jsonb, boolean, text) to anon, authenticated;
+
+
+-- Vistas, personal y reporte compatibles con pedidos sin función.
+create or replace view public.compras_detalle with (security_invoker = true) as
+select c.id, c.codigo, c.usuario_id, c.comprador_email, c.funcion_id,
+       f.pelicula_id, coalesce(p.titulo, 'Solo candy') as pelicula_titulo, coalesce(s.nombre, '') as sala_nombre,
+       c.fecha_funcion, f.hora_inicio, f.formato, f.idioma,
+       c.total_centavos, c.credito_usado_centavos, c.pago_otro_centavos,
+       c.medio_pago, c.estado, c.qr_token, c.aviso_adulto,
+       c.creada_en, c.cancelada_en,
+       coalesce(detalle.entradas, '[]'::jsonb) as entradas,
+       c.entradas_total_centavos, c.productos_total_centavos,
+       coalesce(candy.productos, '[]'::jsonb) as productos,
+       c.combos_total_centavos,
+       coalesce(combo_detalle.combos, '[]'::jsonb) as combos,
+       c.candy_retirado_en,
+       c.total_centavos + c.descuento_centavos as subtotal_centavos,
+       c.descuento_centavos, c.cupon_id, c.cupon_codigo, c.cupon_porcentaje,
+       c.puntos_ganados, c.ingreso_validado_en
+from public.compras c
+left join public.funciones f on f.id = c.funcion_id
+left join public.peliculas p on p.id = f.pelicula_id
+left join public.salas s on s.id = f.sala_id
+left join lateral (
+  select jsonb_agg(jsonb_build_object(
+    'butaca_codigo', e.butaca_codigo, 'tipo', e.tipo, 'precio_centavos', e.precio_centavos
+  ) order by e.butaca_codigo) as entradas
+  from public.entradas e where e.compra_id = c.id
+) detalle on true
+left join lateral (
+  select jsonb_agg(jsonb_build_object(
+    'producto_id', cp.producto_id, 'nombre', cp.producto_nombre,
+    'cantidad', cp.cantidad, 'precio_unitario_centavos', cp.precio_unitario_centavos,
+    'subtotal_centavos', cp.subtotal_centavos
+  ) order by cp.producto_nombre) as productos
+  from public.compra_productos cp where cp.compra_id = c.id
+) candy on true
+left join lateral (
+  select jsonb_agg(jsonb_build_object(
+    'combo_id', cc.combo_id, 'nombre', cc.combo_nombre,
+    'cantidad', cc.cantidad, 'precio_unitario_centavos', cc.precio_unitario_centavos,
+    'subtotal_centavos', cc.subtotal_centavos
+  ) order by cc.combo_nombre) as combos
+  from public.compra_combos cc where cc.compra_id = c.id
+) combo_detalle on true;
+
+grant select on public.compras_detalle to authenticated;
+
+create or replace function public.consultar_compra_personal(
+  p_codigo text, p_qr_token uuid default null
+)
+returns table (
+  valida boolean,
+  estado text,
+  compra_codigo text,
+  pelicula_titulo text,
+  fecha_funcion date,
+  hora_inicio time,
+  sala_nombre text,
+  butacas text[],
+  productos jsonb,
+  combos jsonb,
+  ingreso_validado_en timestamptz,
+  candy_retirado_en timestamptz
+)
+language plpgsql security definer
+set search_path = public, pg_temp as $$
+begin
+  if not exists (
+    select 1 from public.perfiles p
+    where p.id = auth.uid() and p.rol in ('empleado', 'admin')
+  ) then raise exception 'Solo el personal del cine puede consultar compras.'; end if;
+
+  return query
+  select c.estado = 'pagada', c.estado, c.codigo, coalesce(p.titulo, 'Solo candy'), c.fecha_funcion,
+         f.hora_inicio, s.nombre,
+         array(select e.butaca_codigo from public.entradas e
+               where e.compra_id = c.id order by e.butaca_codigo),
+         coalesce((select jsonb_agg(jsonb_build_object(
+           'producto_id', cp.producto_id, 'nombre', cp.producto_nombre,
+           'cantidad', cp.cantidad, 'precio_unitario_centavos', cp.precio_unitario_centavos,
+           'subtotal_centavos', cp.subtotal_centavos
+         ) order by cp.producto_nombre)
+         from public.compra_productos cp where cp.compra_id = c.id), '[]'::jsonb),
+         coalesce((select jsonb_agg(jsonb_build_object(
+           'combo_id', cc.combo_id, 'nombre', cc.combo_nombre,
+           'cantidad', cc.cantidad, 'precio_unitario_centavos', cc.precio_unitario_centavos,
+           'subtotal_centavos', cc.subtotal_centavos
+         ) order by cc.combo_nombre)
+         from public.compra_combos cc where cc.compra_id = c.id), '[]'::jsonb),
+         c.ingreso_validado_en, c.candy_retirado_en
+  from public.compras c
+  left join public.funciones f on f.id = c.funcion_id
+  left join public.peliculas p on p.id = f.pelicula_id
+  left join public.salas s on s.id = f.sala_id
+  where c.codigo = upper(trim(p_codigo))
+    and (p_qr_token is null or c.qr_token = p_qr_token);
+end;
+$$;
+revoke all on function public.consultar_compra_personal(text, uuid) from public;
+grant execute on function public.consultar_compra_personal(text, uuid) to authenticated;
+
+create or replace function public.reporte_ventas_admin(
+  p_dia date, p_periodo text default 'semana'
+)
+returns jsonb language plpgsql security definer
+set search_path = public, pg_temp as $$
+declare
+  v_inicio timestamptz;
+  v_fin timestamptz;
+  v_desde date;
+  v_hasta date;
+  v_facturacion bigint;
+  v_entradas bigint;
+  v_compras bigint;
+  v_ventas jsonb;
+  v_peliculas jsonb;
+  v_producto jsonb;
+begin
+  if not public.es_admin() then
+    raise exception 'Solo un administrador puede consultar reportes.';
+  end if;
+  if p_dia is null or p_periodo is null or p_periodo not in ('semana', 'mes') then
+    raise exception 'Elegí una fecha y un período válidos.';
+  end if;
+
+  -- La facturación usa la fecha local de la venta, no la de la función.
+  v_inicio := p_dia::timestamp at time zone 'America/Argentina/Buenos_Aires';
+  v_fin := (p_dia + 1)::timestamp at time zone 'America/Argentina/Buenos_Aires';
+  v_desde := date_trunc(case when p_periodo = 'semana' then 'week' else 'month' end,
+                        p_dia::timestamp)::date;
+  v_hasta := case when p_periodo = 'semana'
+    then v_desde + 7
+    else (v_desde + interval '1 month')::date end;
+
+  select coalesce(sum(c.total_centavos), 0)::bigint,
+         count(*)::bigint,
+         coalesce(sum(e.cantidad), 0)::bigint
+  into v_facturacion, v_compras, v_entradas
+  from public.compras c
+  left join lateral (
+    select count(*)::bigint as cantidad from public.entradas
+    where compra_id = c.id
+  ) e on true
+  where c.estado = 'pagada' and c.creada_en >= v_inicio and c.creada_en < v_fin;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'codigo', c.codigo, 'creada_en', c.creada_en, 'pelicula', coalesce(p.titulo, 'Solo candy'),
+    'entradas', e.cantidad, 'total_centavos', c.total_centavos
+  ) order by c.creada_en desc), '[]'::jsonb)
+  into v_ventas
+  from public.compras c
+  left join public.funciones f on f.id = c.funcion_id
+  left join public.peliculas p on p.id = f.pelicula_id
+  left join lateral (
+    select count(*)::bigint as cantidad from public.entradas
+    where compra_id = c.id
+  ) e on true
+  where c.estado = 'pagada' and c.creada_en >= v_inicio and c.creada_en < v_fin;
+
+  -- Las películas se agrupan por fecha de función; las compras canceladas no cuentan.
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'pelicula_id', ranking.pelicula_id, 'titulo', ranking.titulo,
+    'entradas', ranking.entradas
+  ) order by ranking.entradas desc, ranking.titulo), '[]'::jsonb)
+  into v_peliculas
+  from (
+    select p.id as pelicula_id, p.titulo, count(e.id)::bigint as entradas
+    from public.compras c
+    join public.entradas e on e.compra_id = c.id
+    join public.funciones f on f.id = c.funcion_id
+    join public.peliculas p on p.id = f.pelicula_id
+    where c.estado = 'pagada'
+      and c.fecha_funcion >= v_desde and c.fecha_funcion < v_hasta
+    group by p.id, p.titulo
+  ) ranking;
+
+  -- compra_productos incluye los productos que forman parte de combos.
+  select jsonb_build_object('producto_id', ranking.producto_id,
+    'nombre', ranking.nombre, 'cantidad', ranking.cantidad)
+  into v_producto
+  from (
+    select p.id as producto_id, p.nombre, sum(cp.cantidad)::bigint as cantidad
+    from public.compra_productos cp
+    join public.compras c on c.id = cp.compra_id and c.estado = 'pagada'
+      and c.creada_en >= v_inicio and c.creada_en < v_fin
+    join public.productos_candy p on p.id = cp.producto_id
+    group by p.id, p.nombre
+    order by cantidad desc, p.nombre
+    limit 1
+  ) ranking;
+
+  return jsonb_build_object(
+    'dia', p_dia, 'periodo', p_periodo,
+    'periodo_desde', v_desde, 'periodo_hasta', v_hasta - 1,
+    'facturacion_centavos', v_facturacion,
+    'entradas_vendidas', v_entradas, 'compras', v_compras,
+    'ventas', v_ventas, 'peliculas', v_peliculas,
+    'producto_mas_vendido', v_producto
+  );
+end;
+$$;
+
+revoke all on function public.reporte_ventas_admin(date, text) from public;
+grant execute on function public.reporte_ventas_admin(date, text) to authenticated;
+
+-- Aviso de edad solo para quienes aún son menores.
+create or replace function public.confirmar_compra(
+  p_funcion_id uuid,
+  p_fecha date,
+  p_codigos text[],
+  p_sesion_token uuid,
+  p_email text,
+  p_fecha_nacimiento date,
+  p_usar_credito boolean,
+  p_medio_pago text,
+  p_productos jsonb,
+  p_combos jsonb,
+  p_cupon_id uuid
+)
+returns table (
+  compra_id uuid,
+  compra_codigo text,
+  compra_qr_token uuid,
+  entradas_total_centavos bigint,
+  productos_total_centavos bigint,
+  combos_total_centavos bigint,
+  subtotal_centavos bigint,
+  descuento_centavos bigint,
+  cupon_id uuid,
+  cupon_codigo text,
+  cupon_porcentaje smallint,
+  total_centavos bigint,
+  credito_usado_centavos bigint,
+  pago_otro_centavos bigint,
+  medio_pago text,
+  aviso_adulto boolean,
+  comprador_email text,
+  creada_en timestamptz,
+  productos jsonb,
+  combos jsonb,
+  puntos_ganados bigint
+)
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_pelicula public.peliculas%rowtype;
+  v_hoy date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+  v_precio_base integer := 800000;
+  v_hash text;
+  v_base record;
+  v_aviso boolean;
+  v_nacimiento date;
+begin
+  select p.* into v_pelicula
+  from public.funciones f
+  join public.peliculas p on p.id = f.pelicula_id
+  where f.id = p_funcion_id and f.activa and p.visible_inicio;
+
+  if not found then raise exception 'La función seleccionada no está disponible.'; end if;
+  if v_hoy < v_pelicula.fecha_estreno then
+    if not v_pelicula.preventa_habilitada
+       or v_pelicula.precio_preventa_centavos is null
+       or v_hoy < v_pelicula.fecha_estreno - 7 then
+      raise exception 'La venta de entradas todavía no comenzó.';
+    end if;
+    v_precio_base := v_pelicula.precio_preventa_centavos;
+  end if;
+
+  if exists (select 1 from unnest(p_codigos) codigo where split_part(codigo, '-', 1) = 'K') then
+    raise exception 'La fila K ya no está disponible para comprar.';
+  end if;
+
+  v_hash := encode(digest(p_sesion_token::text, 'sha256'), 'hex');
+  update public.reservas_butacas r
+  set precio_centavos = v_precio_base + case when r.tipo = 'vip' then 300000 else 0 end
+  where r.funcion_id = p_funcion_id and r.fecha_funcion = p_fecha
+    and r.sesion_hash = v_hash and r.estado = 'reservada'
+    and r.butaca_codigo = any(coalesce(p_codigos, array[]::text[]));
+
+  select * into v_base from public.confirmar_compra_sin_preventa(
+    p_funcion_id, p_fecha, p_codigos, p_sesion_token, p_email,
+    p_fecha_nacimiento, p_usar_credito, p_medio_pago, p_productos,
+    p_combos, p_cupon_id
+  );
+
+  select fecha_nacimiento into v_nacimiento from public.perfiles where id = auth.uid();
+  v_nacimiento := coalesce(v_nacimiento, p_fecha_nacimiento);
+  v_aviso := v_pelicula.clasificacion <> 'ATP'
+    and v_nacimiento is not null
+    and age(p_fecha, v_nacimiento) < interval '18 years';
+  update public.compras set aviso_adulto = v_aviso where id = v_base.compra_id;
+  update public.entradas set aviso_adulto = v_aviso where compra_id = v_base.compra_id;
+
+  return query select
+    v_base.compra_id, v_base.compra_codigo, v_base.compra_qr_token,
+    v_base.entradas_total_centavos, v_base.productos_total_centavos,
+    v_base.combos_total_centavos, v_base.subtotal_centavos,
+    v_base.descuento_centavos, v_base.cupon_id, v_base.cupon_codigo,
+    v_base.cupon_porcentaje, v_base.total_centavos,
+    v_base.credito_usado_centavos, v_base.pago_otro_centavos,
+    v_base.medio_pago, v_aviso, v_base.comprador_email,
+    v_base.creada_en, v_base.productos, v_base.combos,
+    v_base.puntos_ganados;
+end;
+$$;
+
+
+create or replace function public.validar_operacion_personal(
+  p_codigo text, p_operacion text, p_qr_token uuid default null
+)
+returns table (compra_codigo text, operacion text, validado_en timestamptz)
+language plpgsql security definer
+set search_path = public, pg_temp as $$
+declare
+  v_compra public.compras%rowtype;
+  v_fecha timestamptz;
+begin
+  if not exists (
+    select 1 from public.perfiles p
+    where p.id = auth.uid() and p.rol in ('empleado', 'admin')
+  ) then raise exception 'Solo el personal del cine puede validar compras.'; end if;
+  if p_operacion is null or p_operacion not in ('ingreso', 'candy') then
+    raise exception 'La operación solicitada no es válida.';
+  end if;
+
+  select c.* into v_compra from public.compras c
+  where c.codigo = upper(trim(p_codigo))
+    and (p_qr_token is null or c.qr_token = p_qr_token)
+  for update;
+  if not found then raise exception 'No se encontró una compra con ese código.'; end if;
+  if v_compra.estado <> 'pagada' then raise exception 'La compra no está vigente.'; end if;
+
+  perform set_config('app.umbral_modo_validacion',
+    case when p_qr_token is null then 'manual' else 'qr' end, true);
+
+  if p_operacion = 'ingreso' then
+    if v_compra.funcion_id is null then
+      raise exception 'El pedido no incluye entrada.';
+    end if;
+    if v_compra.ingreso_validado_en is not null then
+      raise exception 'El ingreso de esta entrada ya fue validado.';
+    end if;
+    update public.compras c
+    set ingreso_validado_en = now(), ingreso_validado_por = auth.uid()
+    where c.id = v_compra.id returning c.ingreso_validado_en into v_fecha;
+  else
+    if v_compra.candy_retirado_en is not null then
+      raise exception 'El candy de esta compra ya fue entregado.';
+    end if;
+    if not exists (
+      select 1 from public.compra_productos cp where cp.compra_id = v_compra.id
+    ) then raise exception 'La compra no contiene productos del candy.'; end if;
+    update public.compras c
+    set candy_retirado_en = now(), candy_retirado_por = auth.uid()
+    where c.id = v_compra.id returning c.candy_retirado_en into v_fecha;
+  end if;
+  return query select v_compra.codigo, p_operacion, v_fecha;
+end;
+$$;
+revoke all on function public.validar_operacion_personal(text, text, uuid) from public;
+grant execute on function public.validar_operacion_personal(text, text, uuid) to authenticated;
+
+-- Validación de recompensas por administradores y empleados.
+alter table public.canjes_recompensas
+  add column if not exists entregado_en timestamptz,
+  add column if not exists entregado_por uuid references public.perfiles(id) on delete set null;
+
+create index if not exists canjes_recompensas_creado_idx
+  on public.canjes_recompensas (creado_en desc);
+
+-- La consulta y la confirmación comparten una puerta de acceso controlada por rol.
+-- FOR UPDATE impide que dos personas validen el mismo código al mismo tiempo.
+create or replace function public.gestionar_canje_puntos_personal(
+  p_codigo text, p_confirmar boolean default false
+)
+returns jsonb language plpgsql security definer
+set search_path = public, pg_temp as $$
+declare
+  v_actor uuid := auth.uid();
+  v_codigo text := upper(trim(coalesce(p_codigo, '')));
+  v_canje public.canjes_recompensas%rowtype;
+  v_email text;
+begin
+  if not exists (
+    select 1 from public.perfiles p
+    where p.id = v_actor and p.rol in ('empleado', 'admin')
+  ) then
+    raise exception 'Solo el personal del cine puede validar canjes.';
+  end if;
+  if v_codigo !~ '^CAN-[A-Z0-9]{10}$' then
+    raise exception 'Ingresá un código con formato CAN-XXXXXXXXXX.';
+  end if;
+
+  if coalesce(p_confirmar, false) then
+    select c.* into v_canje from public.canjes_recompensas c
+    where c.codigo = v_codigo for update;
+  else
+    select c.* into v_canje from public.canjes_recompensas c
+    where c.codigo = v_codigo;
+  end if;
+  if not found then raise exception 'No se encontró un canje con ese código.'; end if;
+
+  if coalesce(p_confirmar, false) then
+    if v_canje.entregado_en is not null then
+      raise exception 'Este código ya fue validado y no puede usarse otra vez.';
+    end if;
+    update public.canjes_recompensas c
+    set entregado_en = now(), entregado_por = v_actor
+    where c.id = v_canje.id returning c.* into v_canje;
+
+    insert into public.auditoria_actividad
+      (usuario_id, usuario_email, accion, entidad, entidad_id, detalle)
+    select v_actor, p.email, 'canje_validado', 'canjes_recompensas',
+      v_canje.id::text,
+      jsonb_build_object('codigo', v_canje.codigo, 'tipo', v_canje.tipo,
+        'recompensa', v_canje.recompensa_nombre)
+    from public.perfiles p where p.id = v_actor;
+  end if;
+
+  select p.email into v_email from public.perfiles p where p.id = v_canje.usuario_id;
+  return jsonb_build_object(
+    'id', v_canje.id, 'codigo', v_canje.codigo,
+    'usuario_email', v_email,
+    'recompensa_nombre', v_canje.recompensa_nombre,
+    'recompensa_descripcion', v_canje.recompensa_descripcion,
+    'tipo', v_canje.tipo, 'producto_nombre', v_canje.producto_nombre,
+    'costo_puntos', v_canje.costo_puntos,
+    'creado_en', v_canje.creado_en, 'entregado_en', v_canje.entregado_en
+  );
+end;
+$$;
+revoke all on function public.gestionar_canje_puntos_personal(text, boolean) from public;
+grant execute on function public.gestionar_canje_puntos_personal(text, boolean) to authenticated;
+
+create or replace function public.listar_canjes_puntos_personal()
+returns jsonb language plpgsql security definer
+set search_path = public, pg_temp as $$
+declare
+  v_resultado jsonb;
+begin
+  if not exists (
+    select 1 from public.perfiles p
+    where p.id = auth.uid() and p.rol in ('empleado', 'admin')
+  ) then
+    raise exception 'Solo el personal del cine puede consultar canjes.';
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', c.id, 'codigo', c.codigo,
+    'usuario_email', p.email,
+    'recompensa_nombre', c.recompensa_nombre,
+    'recompensa_descripcion', c.recompensa_descripcion,
+    'tipo', c.tipo, 'producto_nombre', c.producto_nombre,
+    'costo_puntos', c.costo_puntos,
+    'creado_en', c.creado_en, 'entregado_en', c.entregado_en
+  ) order by c.creado_en desc), '[]'::jsonb)
+  into v_resultado
+  from (
+    select * from public.canjes_recompensas
+    order by creado_en desc limit 50
+  ) c
+  join public.perfiles p on p.id = c.usuario_id;
+  return v_resultado;
+end;
+$$;
+revoke all on function public.listar_canjes_puntos_personal() from public;
+grant execute on function public.listar_canjes_puntos_personal() to authenticated;
+-- Los premios reclamados con puntos se aplican durante la compra del cliente.
+alter table public.compras
+  drop constraint if exists compras_total_centavos_check;
+alter table public.compras
+  add constraint compras_total_centavos_check check (total_centavos >= 0);
+alter table public.compras
+  add column if not exists recompensas_descuento_centavos bigint not null default 0;
+alter table public.compras drop constraint if exists compras_desglose_total_check;
+alter table public.compras add constraint compras_desglose_total_check check (
+  total_centavos + descuento_centavos + recompensas_descuento_centavos
+    = entradas_total_centavos + productos_total_centavos + combos_total_centavos
+  and recompensas_descuento_centavos >= 0
+);
+
+alter table public.canjes_recompensas
+  add column if not exists compra_id uuid references public.compras(id) on delete restrict,
+  add column if not exists compra_codigo text;
+create index if not exists canjes_recompensas_compra_idx on public.canjes_recompensas(compra_id);
+
+-- Se retira la confirmación manual previa. El personal solo consulta el estado.
+revoke all on function public.gestionar_canje_puntos_personal(text, boolean) from public, anon, authenticated;
+create or replace function public.consultar_canje_puntos_personal(p_codigo text)
+returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_resultado jsonb;
+begin
+  if not exists (select 1 from public.perfiles where id = auth.uid() and rol in ('empleado', 'admin')) then
+    raise exception 'Solo el personal del cine puede consultar canjes.';
+  end if;
+  if upper(trim(coalesce(p_codigo, ''))) !~ '^CAN-[A-Z0-9]{10}$' then
+    raise exception 'Ingresá un código con formato CAN-XXXXXXXXXX.';
+  end if;
+  select jsonb_build_object(
+    'id', c.id, 'codigo', c.codigo, 'usuario_email', p.email,
+    'recompensa_nombre', c.recompensa_nombre, 'recompensa_descripcion', c.recompensa_descripcion,
+    'tipo', c.tipo, 'producto_nombre', c.producto_nombre, 'costo_puntos', c.costo_puntos,
+    'creado_en', c.creado_en, 'entregado_en', c.entregado_en, 'compra_codigo', c.compra_codigo
+  ) into v_resultado from public.canjes_recompensas c
+  join public.perfiles p on p.id = c.usuario_id
+  where c.codigo = upper(trim(p_codigo));
+  if v_resultado is null then raise exception 'No se encontró un canje con ese código.'; end if;
+  return v_resultado;
+end;
+$$;
+revoke all on function public.consultar_canje_puntos_personal(text) from public;
+grant execute on function public.consultar_canje_puntos_personal(text) to authenticated;
+
+create or replace function public.listar_canjes_puntos_personal()
+returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_resultado jsonb;
+begin
+  if not exists (select 1 from public.perfiles where id = auth.uid() and rol in ('empleado', 'admin')) then
+    raise exception 'Solo el personal del cine puede consultar canjes.';
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', c.id, 'codigo', c.codigo, 'usuario_email', p.email,
+    'recompensa_nombre', c.recompensa_nombre, 'recompensa_descripcion', c.recompensa_descripcion,
+    'tipo', c.tipo, 'producto_nombre', c.producto_nombre, 'costo_puntos', c.costo_puntos,
+    'creado_en', c.creado_en, 'entregado_en', c.entregado_en, 'compra_codigo', c.compra_codigo
+  ) order by c.creado_en desc), '[]'::jsonb) into v_resultado
+  from (select * from public.canjes_recompensas order by creado_en desc limit 50) c
+  join public.perfiles p on p.id = c.usuario_id;
+  return v_resultado;
+end;
+$$;
+
+-- Función interna: valida propiedad, disponibilidad y límites; aplica todo en una transacción.
+create or replace function public.aplicar_canjes_compra(
+  p_compra_id uuid, p_canjes text[], p_productos jsonb
+)
+returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
+declare
+  v_compra public.compras%rowtype;
+  v_canje public.canjes_recompensas%rowtype;
+  v_codigo text;
+  v_codigos text[];
+  v_usos jsonb := '{}'::jsonb;
+  v_usados integer;
+  v_cantidad integer;
+  v_precio bigint;
+  v_entradas_gratis integer := 0;
+  v_combo_cantidad integer := 0;
+  v_entradas_elegibles integer;
+  v_descuento bigint := 0;
+  v_total bigint;
+  v_credito bigint;
+  v_puntos bigint;
+begin
+  if auth.uid() is null then raise exception 'Iniciá sesión para usar premios de puntos.'; end if;
+  if p_canjes is null or cardinality(p_canjes) = 0 or cardinality(p_canjes) > 30 then
+    raise exception 'Elegí entre 1 y 30 premios de puntos.';
+  end if;
+  select * into v_compra from public.compras where id = p_compra_id for update;
+  if not found or v_compra.usuario_id is distinct from auth.uid() or v_compra.estado <> 'pagada' then
+    raise exception 'La compra no pertenece a tu cuenta o no está activa.';
+  end if;
+  if v_compra.cupon_id is not null then raise exception 'Los premios de puntos no se combinan con cupones.'; end if;
+  if v_compra.recompensas_descuento_centavos <> 0 then raise exception 'Los premios ya se aplicaron a esta compra.'; end if;
+  select array_agg(distinct codigo order by codigo) into v_codigos from unnest(p_canjes) codigo;
+  if cardinality(v_codigos) <> cardinality(p_canjes)
+     or exists (select 1 from unnest(p_canjes) codigo where codigo is null or codigo !~ '^CAN-[A-Z0-9]{10}$') then
+    raise exception 'La lista de premios contiene códigos repetidos o inválidos.';
+  end if;
+  select coalesce(sum(cc.cantidad), 0)::integer into v_combo_cantidad
+  from public.compra_combos cc where cc.compra_id = p_compra_id;
+
+  foreach v_codigo in array v_codigos loop
+    select * into v_canje from public.canjes_recompensas
+    where codigo = v_codigo for update;
+    if not found or v_canje.usuario_id <> auth.uid() or v_canje.entregado_en is not null then
+      raise exception 'Uno de los premios ya fue usado o no pertenece a tu cuenta.';
+    end if;
+    if v_canje.tipo = 'entrada' then
+      v_entradas_gratis := v_entradas_gratis + 1;
+    else
+      if v_canje.producto_id is null then raise exception 'El premio no tiene producto asociado.'; end if;
+      v_usados := coalesce((v_usos ->> v_canje.producto_id::text)::integer, 0) + 1;
+      select coalesce(sum((item ->> 'cantidad')::integer), 0) into v_cantidad
+      from jsonb_array_elements(coalesce(p_productos, '[]'::jsonb)) item
+      where item ->> 'producto_id' = v_canje.producto_id::text;
+      if v_cantidad < v_usados then raise exception 'Agregá el producto del premio al pedido.'; end if;
+      select cp.precio_unitario_centavos into v_precio from public.compra_productos cp
+      where cp.compra_id = p_compra_id and cp.producto_id = v_canje.producto_id;
+      if v_precio is null then raise exception 'El producto del premio no figura en la compra.'; end if;
+      v_descuento := v_descuento + v_precio;
+      v_usos := jsonb_set(v_usos, array[v_canje.producto_id::text], to_jsonb(v_usados));
+    end if;
+  end loop;
+
+  if v_entradas_gratis > 0 then
+    select count(*)::integer, coalesce(sum(precio_centavos), 0)
+    into v_entradas_elegibles, v_precio
+    from (
+      select precio_centavos from (
+        select e.precio_centavos, e.tipo, e.butaca_codigo,
+          row_number() over (order by e.precio_centavos, e.butaca_codigo) as posicion
+        from public.entradas e where e.compra_id = p_compra_id
+      ) ordenadas
+      where posicion > v_combo_cantidad and tipo in ('estandar', 'accesible')
+      order by precio_centavos, butaca_codigo limit v_entradas_gratis
+    ) elegidas;
+    if v_entradas_elegibles < v_entradas_gratis then
+      raise exception 'La entrada gratis requiere una butaca general o accesible fuera de los combos.';
+    end if;
+    v_descuento := v_descuento + v_precio;
+  end if;
+
+  if v_descuento > v_compra.total_centavos then raise exception 'El valor de los premios supera el total de la compra.'; end if;
+  v_total := v_compra.total_centavos - v_descuento;
+  v_credito := least(v_compra.credito_usado_centavos, v_total);
+  v_puntos := v_total / 100;
+  update public.compras set
+    recompensas_descuento_centavos = v_descuento,
+    total_centavos = v_total,
+    credito_usado_centavos = v_credito,
+    pago_otro_centavos = v_total - v_credito,
+    medio_pago = case when v_total = v_credito then 'credito' else v_compra.medio_pago end,
+    puntos_ganados = v_puntos
+  where id = p_compra_id;
+  update public.perfiles set
+    credito_centavos = credito_centavos + v_compra.credito_usado_centavos - v_credito,
+    puntos = puntos - v_compra.puntos_ganados + v_puntos
+  where id = auth.uid();
+  update public.canjes_recompensas set
+    entregado_en = now(), compra_id = p_compra_id, compra_codigo = v_compra.codigo
+  where codigo = any(v_codigos);
+  insert into public.auditoria_actividad
+    (usuario_id, usuario_email, accion, entidad, entidad_id, detalle)
+  select auth.uid(), p.email, 'canje_aplicado', 'canjes_recompensas', c.id::text,
+    jsonb_build_object('codigo', c.codigo, 'compra_codigo', v_compra.codigo,
+      'tipo', c.tipo, 'recompensa', c.recompensa_nombre)
+  from public.canjes_recompensas c
+  join public.perfiles p on p.id = c.usuario_id
+  where c.codigo = any(v_codigos);
+  return jsonb_build_object(
+    'recompensas_descuento_centavos', v_descuento, 'canjes_aplicados', to_jsonb(v_codigos),
+    'total_centavos', v_total, 'credito_usado_centavos', v_credito,
+    'pago_otro_centavos', v_total - v_credito,
+    'medio_pago', case when v_total = v_credito then 'credito' else v_compra.medio_pago end,
+    'puntos_ganados', v_puntos
+  );
+end;
+$$;
+revoke all on function public.aplicar_canjes_compra(uuid, text[], jsonb) from public, anon, authenticated;
+
+create or replace function public.confirmar_compra_con_canjes(
+  p_funcion_id uuid, p_fecha date, p_codigos text[], p_sesion_token uuid,
+  p_email text, p_fecha_nacimiento date, p_usar_credito boolean, p_medio_pago text,
+  p_productos jsonb, p_combos jsonb, p_cupon_id uuid, p_canjes text[]
+)
+returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_base jsonb; v_ajuste jsonb;
+begin
+  if auth.uid() is null then raise exception 'Iniciá sesión para usar premios de puntos.'; end if;
+  if p_cupon_id is not null then raise exception 'Los premios de puntos no se combinan con cupones.'; end if;
+  select to_jsonb(base) into v_base from public.confirmar_compra(
+    p_funcion_id, p_fecha, p_codigos, p_sesion_token, p_email, p_fecha_nacimiento,
+    p_usar_credito, p_medio_pago, p_productos, p_combos, p_cupon_id
+  ) base;
+  if v_base is null then raise exception 'No se pudo confirmar la compra.'; end if;
+  v_ajuste := public.aplicar_canjes_compra((v_base ->> 'compra_id')::uuid, p_canjes, p_productos);
+  return v_base || v_ajuste;
+end;
+$$;
+revoke all on function public.confirmar_compra_con_canjes(uuid, date, text[], uuid, text, date, boolean, text, jsonb, jsonb, uuid, text[]) from public;
+grant execute on function public.confirmar_compra_con_canjes(uuid, date, text[], uuid, text, date, boolean, text, jsonb, jsonb, uuid, text[]) to authenticated;
+
+create or replace function public.confirmar_compra_candy_con_canjes(
+  p_email text, p_productos jsonb, p_usar_credito boolean, p_medio_pago text, p_canjes text[]
+)
+returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_base jsonb; v_ajuste jsonb;
+begin
+  if auth.uid() is null then raise exception 'Iniciá sesión para usar premios de puntos.'; end if;
+  v_base := public.confirmar_compra_candy(p_email, p_productos, p_usar_credito, p_medio_pago);
+  v_ajuste := public.aplicar_canjes_compra((v_base ->> 'compra_id')::uuid, p_canjes, p_productos);
+  return v_base || v_ajuste;
+end;
+$$;
+revoke all on function public.confirmar_compra_candy_con_canjes(text, jsonb, boolean, text, text[]) from public;
+grant execute on function public.confirmar_compra_candy_con_canjes(text, jsonb, boolean, text, text[]) to authenticated;
+
+-- Si una compra se cancela antes de usar el QR, el premio vuelve a estar disponible.
+create or replace function public.restaurar_canjes_compra_cancelada()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if old.estado = 'pagada' and new.estado = 'cancelada' then
+    update public.canjes_recompensas set entregado_en = null, compra_id = null, compra_codigo = null
+    where compra_id = new.id;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists restaurar_canjes_compra_cancelada on public.compras;
+create trigger restaurar_canjes_compra_cancelada
+after update of estado on public.compras for each row
+execute function public.restaurar_canjes_compra_cancelada();
+
+create or replace view public.compras_detalle with (security_invoker = true) as
+select c.id, c.codigo, c.usuario_id, c.comprador_email, c.funcion_id,
+       f.pelicula_id, coalesce(p.titulo, 'Solo candy') as pelicula_titulo, coalesce(s.nombre, '') as sala_nombre,
+       c.fecha_funcion, f.hora_inicio, f.formato, f.idioma,
+       c.total_centavos, c.credito_usado_centavos, c.pago_otro_centavos,
+       c.medio_pago, c.estado, c.qr_token, c.aviso_adulto,
+       c.creada_en, c.cancelada_en,
+       coalesce(detalle.entradas, '[]'::jsonb) as entradas,
+       c.entradas_total_centavos, c.productos_total_centavos,
+       coalesce(candy.productos, '[]'::jsonb) as productos,
+       c.combos_total_centavos,
+       coalesce(combo_detalle.combos, '[]'::jsonb) as combos,
+       c.candy_retirado_en,
+       c.total_centavos + c.descuento_centavos + c.recompensas_descuento_centavos as subtotal_centavos,
+       c.descuento_centavos, c.cupon_id, c.cupon_codigo, c.cupon_porcentaje,
+       c.puntos_ganados, c.ingreso_validado_en,
+       c.recompensas_descuento_centavos,
+       coalesce(canjes.codigos, '[]'::jsonb) as canjes_aplicados
+from public.compras c
+left join public.funciones f on f.id = c.funcion_id
+left join public.peliculas p on p.id = f.pelicula_id
+left join public.salas s on s.id = f.sala_id
+left join lateral (
+  select jsonb_agg(jsonb_build_object(
+    'butaca_codigo', e.butaca_codigo, 'tipo', e.tipo, 'precio_centavos', e.precio_centavos
+  ) order by e.butaca_codigo) as entradas
+  from public.entradas e where e.compra_id = c.id
+) detalle on true
+left join lateral (
+  select jsonb_agg(jsonb_build_object(
+    'producto_id', cp.producto_id, 'nombre', cp.producto_nombre,
+    'cantidad', cp.cantidad, 'precio_unitario_centavos', cp.precio_unitario_centavos,
+    'subtotal_centavos', cp.subtotal_centavos
+  ) order by cp.producto_nombre) as productos
+  from public.compra_productos cp where cp.compra_id = c.id
+) candy on true
+left join lateral (
+  select jsonb_agg(jsonb_build_object(
+    'combo_id', cc.combo_id, 'nombre', cc.combo_nombre,
+    'cantidad', cc.cantidad, 'precio_unitario_centavos', cc.precio_unitario_centavos,
+    'subtotal_centavos', cc.subtotal_centavos
+  ) order by cc.combo_nombre) as combos
+  from public.compra_combos cc where cc.compra_id = c.id
+) combo_detalle on true
+left join lateral (
+  select jsonb_agg(cr.codigo order by cr.codigo) as codigos
+  from public.canjes_recompensas cr where cr.compra_id = c.id
+) canjes on true;
+
+grant select on public.compras_detalle to authenticated;
+
+-- Corrige la referencia ambigua en la funcion de compra de entradas.
+create or replace function public.confirmar_compra(
+  p_funcion_id uuid,
+  p_fecha date,
+  p_codigos text[],
+  p_sesion_token uuid,
+  p_email text,
+  p_fecha_nacimiento date,
+  p_usar_credito boolean,
+  p_medio_pago text,
+  p_productos jsonb,
+  p_combos jsonb,
+  p_cupon_id uuid
+)
+returns table (
+  compra_id uuid,
+  compra_codigo text,
+  compra_qr_token uuid,
+  entradas_total_centavos bigint,
+  productos_total_centavos bigint,
+  combos_total_centavos bigint,
+  subtotal_centavos bigint,
+  descuento_centavos bigint,
+  cupon_id uuid,
+  cupon_codigo text,
+  cupon_porcentaje smallint,
+  total_centavos bigint,
+  credito_usado_centavos bigint,
+  pago_otro_centavos bigint,
+  medio_pago text,
+  aviso_adulto boolean,
+  comprador_email text,
+  creada_en timestamptz,
+  productos jsonb,
+  combos jsonb,
+  puntos_ganados bigint
+)
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_pelicula public.peliculas%rowtype;
+  v_hoy date := (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+  v_precio_base integer := 800000;
+  v_hash text;
+  v_base record;
+  v_aviso boolean;
+  v_nacimiento date;
+begin
+  select p.* into v_pelicula
+  from public.funciones f
+  join public.peliculas p on p.id = f.pelicula_id
+  where f.id = p_funcion_id and f.activa and p.visible_inicio;
+
+  if not found then raise exception 'La función seleccionada no está disponible.'; end if;
+  if v_hoy < v_pelicula.fecha_estreno then
+    if not v_pelicula.preventa_habilitada
+       or v_pelicula.precio_preventa_centavos is null
+       or v_hoy < v_pelicula.fecha_estreno - 7 then
+      raise exception 'La venta de entradas todavía no comenzó.';
+    end if;
+    v_precio_base := v_pelicula.precio_preventa_centavos;
+  end if;
+
+  if exists (select 1 from unnest(p_codigos) codigo where split_part(codigo, '-', 1) = 'K') then
+    raise exception 'La fila K ya no está disponible para comprar.';
+  end if;
+
+  v_hash := encode(digest(p_sesion_token::text, 'sha256'), 'hex');
+  update public.reservas_butacas r
+  set precio_centavos = v_precio_base + case when r.tipo = 'vip' then 300000 else 0 end
+  where r.funcion_id = p_funcion_id and r.fecha_funcion = p_fecha
+    and r.sesion_hash = v_hash and r.estado = 'reservada'
+    and r.butaca_codigo = any(coalesce(p_codigos, array[]::text[]));
+
+  select * into v_base from public.confirmar_compra_sin_preventa(
+    p_funcion_id, p_fecha, p_codigos, p_sesion_token, p_email,
+    p_fecha_nacimiento, p_usar_credito, p_medio_pago, p_productos,
+    p_combos, p_cupon_id
+  );
+
+  select fecha_nacimiento into v_nacimiento from public.perfiles where id = auth.uid();
+  v_nacimiento := coalesce(v_nacimiento, p_fecha_nacimiento);
+  v_aviso := v_pelicula.clasificacion <> 'ATP'
+    and v_nacimiento is not null
+    and age(p_fecha, v_nacimiento) < interval '18 years';
+  update public.compras set aviso_adulto = v_aviso where id = v_base.compra_id;
+  update public.entradas e set aviso_adulto = v_aviso where e.compra_id = v_base.compra_id;
+
+  return query select
+    v_base.compra_id, v_base.compra_codigo, v_base.compra_qr_token,
+    v_base.entradas_total_centavos, v_base.productos_total_centavos,
+    v_base.combos_total_centavos, v_base.subtotal_centavos,
+    v_base.descuento_centavos, v_base.cupon_id, v_base.cupon_codigo,
+    v_base.cupon_porcentaje, v_base.total_centavos,
+    v_base.credito_usado_centavos, v_base.pago_otro_centavos,
+    v_base.medio_pago, v_aviso, v_base.comprador_email,
+    v_base.creada_en, v_base.productos, v_base.combos,
+    v_base.puntos_ganados;
+end;
+$$;

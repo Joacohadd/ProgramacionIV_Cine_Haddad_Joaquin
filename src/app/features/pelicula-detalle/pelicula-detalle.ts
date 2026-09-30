@@ -11,6 +11,7 @@ import { horaFin } from '../../core/utils/planificacion';
 import { inicioPreventa, preventaActiva, ventaHabilitada } from '../../core/utils/estrenos';
 import { CalificacionEstrellas } from '../../shared/components/calificacion-estrellas/calificacion-estrellas';
 import { DuracionPipe } from '../../shared/pipes/duracion.pipe';
+import { Resena } from '../../core/models/resena.interface';
 
 @Component({ selector: 'app-pelicula-detalle', imports: [RouterLink, ReactiveFormsModule, CalificacionEstrellas, DuracionPipe], templateUrl: './pelicula-detalle.html', styleUrl: './pelicula-detalle.css' })
 export class PeliculaDetalle {
@@ -26,6 +27,7 @@ export class PeliculaDetalle {
   readonly cantidadResenas = this.resenasServicio.cantidad;
   readonly estrellasElegidas = signal(0);
   readonly enviandoResena = signal(false);
+  readonly borrandoResena = signal<string | null>(null);
   readonly formError = signal<string | null>(null);
   readonly formMensaje = signal<string | null>(null);
   private readonly hoy = this.fechaISO(new Date());
@@ -87,6 +89,20 @@ export class PeliculaDetalle {
     } catch (error) {
       this.formError.set(error instanceof Error ? error.message : 'No se pudo publicar la reseña.');
     } finally { this.enviandoResena.set(false); }
+  }
+
+  async borrarResena(resena: Resena): Promise<void> {
+    this.formError.set(null);
+    this.formMensaje.set(null);
+    this.borrandoResena.set(resena.id);
+    try {
+      await this.resenasServicio.eliminar(resena);
+      this.formMensaje.set('Reseña borrada.');
+    } catch (error) {
+      this.formError.set(error instanceof Error ? error.message : 'No se pudo borrar la reseña.');
+    } finally {
+      this.borrandoResena.set(null);
+    }
   }
 
   fechaResena(fecha: string): string {

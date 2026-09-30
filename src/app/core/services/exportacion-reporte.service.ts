@@ -34,6 +34,10 @@ export class ExportacionReporteService {
     documento.setFont('helvetica', 'normal');
     documento.setFontSize(10);
     documento.text(`${reporte.entradas_vendidas} entradas vendidas · ${reporte.compras} compras`, 16, y);
+    y += 7;
+    documento.text(reporte.producto_mas_vendido
+      ? `Candy más vendido: ${reporte.producto_mas_vendido.nombre} (${reporte.producto_mas_vendido.cantidad} unidades)`
+      : 'Candy más vendido: sin ventas', 16, y);
     y += 16;
 
     const encabezado = () => {
@@ -85,6 +89,7 @@ export class ExportacionReporteService {
     hoja.addRow([`Facturación del ${reporte.dia}`]);
     hoja.addRow(['Total facturado', '', '', '', reporte.facturacion_centavos / 100]);
     hoja.addRow(['Entradas vendidas', '', '', reporte.entradas_vendidas]);
+    hoja.addRow(['Candy más vendido', reporte.producto_mas_vendido?.nombre ?? 'Sin ventas', '', reporte.producto_mas_vendido?.cantidad ?? 0]);
     hoja.addRow([]);
     for (const venta of reporte.ventas) {
       hoja.addRow({

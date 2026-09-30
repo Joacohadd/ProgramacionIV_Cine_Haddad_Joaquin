@@ -5,6 +5,11 @@
     <p>Identificá la compra por QR o por su código impreso. El ingreso a sala y la entrega de candy se registran por separado.</p>
   </header>
 
+  <nav class="personal-tabs" aria-label="Operaciones del personal">
+    <a class="active" routerLink="/personal/validacion" aria-current="page">Validar entradas y candy</a>
+    <a routerLink="/personal/canjes-puntos">Canjes de puntos</a>
+  </nav>
+
   <div class="pickup-layout">
     <section class="reader-panel" aria-labelledby="reader-title">
       <span class="panel-number">01</span>
@@ -56,8 +61,10 @@
           <div>
             <small>{{ compra.compra_codigo }}</small>
             <h3>{{ compra.pelicula_titulo }}</h3>
-            <p>{{ fecha(compra.fecha_funcion) }} · {{ compra.hora_inicio }} · {{ compra.sala_nombre }}</p>
-            <p>Butacas: {{ compra.butacas.join(' · ') }}</p>
+            @if (compra.butacas.length) {
+              <p>{{ fecha(compra.fecha_funcion) }} · {{ compra.hora_inicio }} · {{ compra.sala_nombre }}</p>
+              <p>Butacas: {{ compra.butacas.join(' · ') }}</p>
+            } @else { <p>Pedido sin entrada · Retiro en candy bar</p> }
           </div>
           <span class="purchase-status" [class.valid]="compra.valida">{{ compra.valida ? 'VIGENTE' : compra.estado.toLocaleUpperCase() }}</span>
         </div>
@@ -65,7 +72,9 @@
         <div class="validation-grid">
           <div class="validation-box">
             <span>01 / ACCESO A SALA</span>
-            @if (compra.ingreso_validado_en) {
+            @if (!compra.butacas.length) {
+              <strong>Sin entrada</strong><p>Este QR sirve solamente para retirar candy.</p>
+            } @else if (compra.ingreso_validado_en) {
               <strong>Ingreso ya utilizado</strong>
               <p>Validado el {{ fechaHora(compra.ingreso_validado_en) }}.</p>
             } @else if (!compra.valida) {

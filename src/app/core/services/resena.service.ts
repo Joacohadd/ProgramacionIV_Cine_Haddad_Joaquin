@@ -127,4 +127,26 @@ export class ResenaService {
       this.guardando.set(false);
     }
   }
+
+  async eliminar(resena: Resena): Promise<void> {
+    const usuarioId = this.auth.currentUser()?.id ?? this.auth.currentUserData()?.id;
+    if (!usuarioId || resena.usuario_id !== usuarioId) throw new Error('Solo podés borrar tu propia reseña.');
+    this.guardando.set(true);
+    this.error.set(null);
+    try {
+      const client = this.supabase.client;
+      if (client) {
+        const { error } = await client.from('resenas').delete().eq('id', resena.id).eq('usuario_id', usuarioId);
+        if (error) throw new Error('No se pudo borrar la reseña. Intentá nuevamente.');
+        await this.cargarPorPelicula(resena.pelicula_id);
+      } else {
+        this.guardarDemo(this.leerDemo().filter(item => item.id !== resena.id));
+        this.resenasSignal.set(this.leerDemo().filter(item => item.pelicula_id === resena.pelicula_id));
+        this.actualizarResumen(resena.pelicula_id);
+      }
+      this.mensaje.set('Reseña borrada.');
+    } finally {
+      this.guardando.set(false);
+    }
+  }
 }

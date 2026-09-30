@@ -4,6 +4,7 @@
 .admin-heading h1 { max-width: 850px; margin: .8rem 0 0; font: 600 clamp(4rem, 7vw, 7rem)/.9 var(--display); letter-spacing: -.065em; }
 .admin-heading h1 em { color: var(--coral); font-weight: 500; }
 .admin-heading p { margin: 0; color: #bdc6b9; line-height: 1.75; }
+.admin-heading .button-outline { display: inline-block; margin-top: 1.25rem; }
 .rewards-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, .75fr); gap: 1px; margin-top: 2rem; border: 1px solid #596457; background: #596457; align-items: start; }
 .reward-list, .reward-form { background: #172018; }
 .reward-list { min-height: 650px; padding: 2rem; }

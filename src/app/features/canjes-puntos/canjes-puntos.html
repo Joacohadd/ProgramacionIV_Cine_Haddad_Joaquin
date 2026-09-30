@@ -1,0 +1,72 @@
+<section class="canjes-page container">
+  <a class="back-link" routerLink="/">← Volver a cartelera</a>
+  <header class="canjes-heading">
+    <div><span class="eyebrow">PERSONAL / FIDELIZACIÓN</span><h1>Canjes <em>de puntos.</em></h1></div>
+    <p>Consultá los premios reclamados con puntos. Cada cliente los aplica al comprar entradas o candy. Después se valida el QR de la compra para ingresar o retirar el pedido.</p>
+  </header>
+
+  <nav class="personal-tabs" aria-label="Operaciones del personal">
+    <a routerLink="/personal/validacion">Validar entradas y candy</a>
+    <a class="active" routerLink="/personal/canjes-puntos" aria-current="page">Canjes de puntos</a>
+  </nav>
+
+  <div class="canjes-layout">
+    <section class="canjes-reader" aria-labelledby="canjes-reader-title">
+      <span class="section-index">01 / BUSCAR CÓDIGO</span>
+      <h2 id="canjes-reader-title">Identificar canje</h2>
+      <p>Consultá el código que figura en <strong>Mi perfil → Mis canjes</strong> para ver si ya fue aplicado a una compra.</p>
+      <form [formGroup]="form" (ngSubmit)="consultar()">
+        <label for="codigo-canje">Código de puntos</label>
+        <div class="search-row">
+          <input id="codigo-canje" formControlName="codigo" placeholder="CAN-XXXXXXXXXX"
+            spellcheck="false" autocomplete="off" maxlength="14" (input)="normalizarCodigo()">
+          <button class="button-primary" type="submit" [disabled]="servicio.procesando()">{{ servicio.procesando() ? 'Buscando...' : 'Buscar →' }}</button>
+        </div>
+        @if (form.controls.codigo.touched && form.controls.codigo.invalid) {
+          <small class="field-error">Ingresá un código CAN- seguido de 10 letras o números.</small>
+        }
+      </form>
+      @if (servicio.error()) { <p class="canjes-error" role="alert">{{ servicio.error() }}</p> }
+      @if (servicio.mensaje()) { <p class="canjes-success" role="status">{{ servicio.mensaje() }}</p> }
+
+      @if (servicio.resultado(); as canje) {
+        <article class="canje-result" [class.used]="!!canje.entregado_en">
+          <div class="result-head">
+            <span>{{ canje.tipo === 'producto' ? 'RECOMPENSA DE CANDY' : 'RECOMPENSA DE ENTRADA' }}</span>
+            <strong [class.used]="!!canje.entregado_en">{{ canje.entregado_en ? 'APLICADO' : 'DISPONIBLE' }}</strong>
+          </div>
+          <h3>{{ canje.recompensa_nombre }}</h3>
+          <p>{{ canje.recompensa_descripcion }}</p>
+          <dl>
+            <div><dt>Código</dt><dd><code>{{ canje.codigo }}</code></dd></div>
+            <div><dt>Cliente</dt><dd>{{ canje.usuario_email }}</dd></div>
+            @if (canje.tipo === 'producto') { <div><dt>Producto a entregar</dt><dd>{{ canje.producto_nombre }}</dd></div> }
+            <div><dt>Puntos usados</dt><dd>{{ canje.costo_puntos }}</dd></div>
+            <div><dt>Canje solicitado</dt><dd>{{ fechaHora(canje.creado_en) }}</dd></div>
+            @if (canje.entregado_en) { <div><dt>Aplicado</dt><dd>{{ fechaHora(canje.entregado_en) }}</dd></div> }
+            @if (canje.compra_codigo) { <div><dt>Compra</dt><dd>{{ canje.compra_codigo }}</dd></div> }
+          </dl>
+          @if (canje.entregado_en) {
+            <p class="used-note">El premio ya se aplicó. Para entregar el producto o validar la entrada, usá el QR de la compra.</p>
+          } @else {
+            <p class="delivery-note">El cliente puede marcar este premio al comprar. Todavía no forma parte de una compra.</p>
+          }
+        </article>
+      }
+    </section>
+
+    <section class="canjes-history" aria-labelledby="canjes-history-title">
+      <div class="history-head"><div><span class="section-index">02 / ÚLTIMOS MOVIMIENTOS</span><h2 id="canjes-history-title">Canjes recientes</h2></div><button type="button" (click)="servicio.cargarRecientes()" [disabled]="servicio.cargando()">Actualizar ↗</button></div>
+      @if (servicio.cargando()) { <p class="history-empty">Cargando canjes...</p> }
+      @else {
+        @for (canje of servicio.recientes(); track canje.id) {
+          <button class="history-row" type="button" (click)="elegir(canje.codigo)" [disabled]="servicio.procesando()">
+            <span><strong>{{ canje.codigo }}</strong><small>{{ canje.usuario_email }} · {{ fechaHora(canje.creado_en) }}</small></span>
+            <span class="reward-name">{{ canje.recompensa_nombre }}</span>
+            <span class="history-status" [class.done]="!!canje.entregado_en">{{ canje.entregado_en ? 'APLICADO' : 'DISPONIBLE' }}</span>
+          </button>
+        } @empty { <p class="history-empty">Todavía no hay canjes de puntos.</p> }
+      }
+    </section>
+  </div>
+</section>

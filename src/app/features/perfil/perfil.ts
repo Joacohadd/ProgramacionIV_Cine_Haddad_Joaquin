@@ -41,7 +41,8 @@ export class PerfilComponent {
   }
 
   async cancelar(compra: Compra): Promise<void> {
-    try { await this.compras.cancelar(compra); } catch { /* El servicio muestra el error. */ }
+    try { await this.compras.cancelar(compra); await this.fidelizacion.cargarPerfil(); }
+    catch { /* El servicio muestra el error. */ }
   }
 
   async canjear(recompensa: Recompensa): Promise<void> {

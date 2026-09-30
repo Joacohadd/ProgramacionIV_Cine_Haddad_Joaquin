@@ -44,6 +44,8 @@ export interface Compra {
   combos_total_centavos: number;
   subtotal_centavos: number;
   descuento_centavos: number;
+  recompensas_descuento_centavos?: number;
+  canjes_aplicados?: string[];
   cupon_id: string | null;
   cupon_codigo: string | null;
   cupon_porcentaje: number | null;
@@ -80,6 +82,8 @@ export interface ResultadoCompraRpc {
   combos_total_centavos: number;
   subtotal_centavos: number;
   descuento_centavos: number;
+  recompensas_descuento_centavos?: number;
+  canjes_aplicados?: string[];
   cupon_id: string | null;
   cupon_codigo: string | null;
   cupon_porcentaje: number | null;

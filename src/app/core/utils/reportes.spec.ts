@@ -37,4 +37,19 @@ describe('reportes de ventas', () => {
     expect(construirReporteDemo(compras, '2026-09-24', 'semana').peliculas).toHaveLength(0);
     expect(construirReporteDemo(compras, '2026-09-24', 'mes').peliculas[0].entradas).toBe(2);
   });
+
+  it('incluye pedidos de solo candy en las ventas y calcula el más vendido del día', () => {
+    const compras = [
+      compra({ codigo: 'UMB-CANDYCANDY', funcion_id: '', fecha_funcion: '', pelicula_id: '',
+        entradas: [], productos: [{ producto_id: 'bebida', nombre: 'Bebida', cantidad: 4 }],
+        creada_en: '2026-09-24T15:00:00Z' } as unknown as Partial<Compra>),
+      compra({ codigo: 'UMB-OTRODIAAAA', productos: [{ producto_id: 'pochoclos', nombre: 'Pochoclos', cantidad: 8 }],
+        creada_en: '2026-09-23T15:00:00Z' } as unknown as Partial<Compra>)
+    ];
+    const reporte = construirReporteDemo(compras, '2026-09-24', 'semana');
+    expect(reporte.ventas[0].pelicula).toBe('Solo candy');
+    expect(reporte.entradas_vendidas).toBe(0);
+    expect(reporte.producto_mas_vendido?.nombre).toBe('Bebida');
+    expect(reporte.producto_mas_vendido?.cantidad).toBe(4);
+  });
 });

@@ -34,7 +34,7 @@ describe('planificación de funciones', () => {
   });
 
   it('calcula capacidad y horario de finalización', () => {
-    expect(capacidadSala({ filas: 20, butacas_izquierda: 4, butacas_centro: 20, butacas_derecha: 4 })).toBe(532);
+    expect(capacidadSala({ filas: 20, butacas_izquierda: 4, butacas_centro: 20, butacas_derecha: 4 })).toBe(518);
     expect(horaFin('23:00', 120)).toBe('01:00 +1');
   });
 

@@ -132,6 +132,9 @@ export class RetiroCandyService {
     const compras = this.leerComprasDemo();
     const compra = compras.find(item => item.codigo === codigo);
     if (!compra || compra.estado !== 'pagada') throw new Error('La compra no está vigente.');
+    if (operacion === 'ingreso' && !compra.entradas.length) {
+      throw new Error('Este pedido es solo de candy y no incluye entrada.');
+    }
     if (operacion === 'ingreso' && compra.ingreso_validado_en) {
       throw new Error('El ingreso de esta entrada ya fue validado.');
     }

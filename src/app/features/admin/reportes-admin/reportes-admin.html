@@ -40,7 +40,7 @@
         <p>En {{ reporte.compras }} {{ reporte.compras === 1 ? 'compra' : 'compras' }} del día.</p>
       </article>
       <article class="metric metric-candy">
-        <span>03 / CANDY MÁS VENDIDO · HISTÓRICO</span>
+        <span>03 / CANDY MÁS VENDIDO · {{ fecha(reporte.dia) }}</span>
         @if (reporte.producto_mas_vendido; as producto) {
           <strong>{{ producto.nombre }}</strong>
           <p>{{ producto.cantidad }} unidades vendidas, incluidas las de combos.</p>

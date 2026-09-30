@@ -39,13 +39,13 @@ Aplicación web de un cine desarrollada con Angular, TypeScript, HTML y CSS. La 
 
 - Mapa de butacas dividido en tres bloques.
 - Selección y reserva temporal con actualización en tiempo real.
-- Filas J y K accesibles con distribución 2, 10 y 2.
+- Fila J accesible con distribución 2, 10 y 2; la fila K no está habilitada.
 - Filas R, S y T VIP con precio diferencial.
 
 ### 4.6 Compra, entradas y cancelaciones
 
 - Compra de las butacas reservadas para una función.
-- Control de edad según clasificación y aviso de acompañamiento adulto.
+- Control de edad según clasificación; el aviso de acompañamiento se muestra solo a compradores menores de 18 años.
 - Uso total o parcial del crédito junto con otro medio de pago.
 - Entrada descargable en PDF con código QR validable por personal autorizado.
 - Historial de compras en el perfil.
@@ -56,6 +56,7 @@ Aplicación web de un cine desarrollada con Angular, TypeScript, HTML y CSS. La 
 - Alta y edición de productos con nombre, descripción, precio e imagen opcional.
 - Publicación y ocultamiento desde administración.
 - Catálogo público con los productos publicados y sus precios.
+- Compra de productos sin entrada, con QR y comprobante para retirarlos en el candy bar.
 - Creación de categorías y asignación a cada producto.
 - Catálogo agrupado por categoría.
 - Productos del candy agregados a la misma compra de entradas.
@@ -81,6 +82,8 @@ El retiro del candy y el acceso a sala se registran por separado para que una ac
 - Alta, edición, publicación y configuración del costo en puntos desde administración.
 - Canje seguro con descuento de puntos y código personal.
 - Saldo e historial de canjes disponibles en el perfil.
+- Los premios reclamados con puntos aparecen como casillas durante la compra. La entrada gratis cubre una butaca general o accesible fuera de combos; los productos gratis se agregan al pedido de entradas o al de solo candy. El uso del premio y el descuento se registran juntos al confirmar. El personal consulta su estado y valida únicamente el QR de la compra.
+- La validación de una recompensa de entrada registra el uso del código; la asignación de butaca se gestiona por separado en boletería.
 - Reversión de los puntos acreditados cuando se cancela una compra.
 
 ### 4.10 Próximos estrenos y preventa
@@ -115,7 +118,7 @@ npm start
 
 La aplicación queda disponible en `http://localhost:4200`.
 
-Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar las migraciones pendientes en orden hasta `supabase/migrations/20260927_reportes.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
+Para preparar Supabase, ejecutar `supabase/schema.sql` y `supabase/seed.sql`. Si la base ya tiene los puntos anteriores, ejecutar las migraciones pendientes en orden hasta `supabase/migrations/20260930_z_corregir_compra_id_ambiguo.sql`. La URL y la publishable key se configuran en `src/environments/environment.ts`.
 
 ## Verificar
 

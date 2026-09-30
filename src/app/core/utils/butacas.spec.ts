@@ -15,17 +15,17 @@ describe('mapa de butacas', () => {
     expect(filaA.sectores.flat()).toHaveLength(28);
   });
 
-  it('adapta las filas J y K a 2, 10 y 2 butacas accesibles', () => {
+  it('excluye K y mantiene J como fila accesible', () => {
     const mapa = generarMapaButacas(sala);
-    for (const indice of [9, 10]) {
-      expect(mapa[indice].tipo).toBe('accesible');
-      expect(mapa[indice].sectores.map(sector => sector.length)).toEqual([2, 10, 2]);
-    }
+    expect(mapa.map(fila => fila.etiqueta)).not.toContain('K');
+    expect(mapa).toHaveLength(19);
+    expect(mapa[9].tipo).toBe('accesible');
+    expect(mapa[9].sectores.map(sector => sector.length)).toEqual([2, 10, 2]);
   });
 
   it('marca R, S y T como VIP y aplica el precio diferencial', () => {
     const mapa = generarMapaButacas(sala);
-    for (const indice of [17, 18, 19]) {
+    for (const indice of [16, 17, 18]) {
       const butacas = mapa[indice].sectores.flat();
       expect(mapa[indice].tipo).toBe('vip');
       expect(butacas[0].precio_centavos).toBe(PRECIO_BUTACA_CENTAVOS + RECARGO_VIP_CENTAVOS);

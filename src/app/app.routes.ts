@@ -13,6 +13,7 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./features/auth/login/login').then(c => c.Login) },
   { path: 'perfil', canActivate: [authGuard], loadComponent: () => import('./features/perfil/perfil').then(c => c.PerfilComponent) },
   { path: 'personal/validacion', canActivate: [personalGuard], loadComponent: () => import('./features/retiro-candy/retiro-candy').then(c => c.RetiroCandyComponent) },
+  { path: 'personal/canjes-puntos', canActivate: [personalGuard], loadComponent: () => import('./features/canjes-puntos/canjes-puntos').then(c => c.CanjesPuntos) },
   { path: 'personal/retiro-candy', redirectTo: 'personal/validacion' },
   { path: 'admin/peliculas', canActivate: [adminGuard], loadComponent: () => import('./features/admin/peliculas-admin/peliculas-admin').then(c => c.PeliculasAdmin) },
   { path: 'admin/peliculas/nueva', canActivate: [adminGuard], loadComponent: () => import('./features/admin/pelicula-form/pelicula-form').then(c => c.PeliculaForm) },
